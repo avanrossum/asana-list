@@ -21,8 +21,6 @@ class AsanaAPI {
     if (!apiKey) throw new Error('No API key configured');
 
     const url = `${BASE_URL}${endpoint}`;
-    console.log('[asana-api] Fetching:', endpoint, '| key length:', apiKey.length);
-
     const headers = {
       'Authorization': `Bearer ${apiKey}`,
       'Accept': 'application/json',
@@ -154,16 +152,19 @@ class AsanaAPI {
       let tasks = [];
       if (settings.showOnlyMyTasks && settings.currentUserId) {
         tasks = await this.getTasks(workspaceGid, settings.currentUserId);
+        // Asana search returns collaborator tasks too — filter to direct assignments only
+        tasks = tasks.filter(t => t.assignee && t.assignee.gid === settings.currentUserId);
       } else if (settings.selectedUserIds && settings.selectedUserIds.length > 0) {
         // Fetch tasks for each selected user
         const taskSets = await Promise.all(
           settings.selectedUserIds.map(uid => this.getTasks(workspaceGid, uid))
         );
-        // Merge and deduplicate by gid
+        // Merge and deduplicate by gid, filter to direct assignments only
+        const selectedSet = new Set(settings.selectedUserIds);
         const seen = new Set();
         for (const set of taskSets) {
           for (const task of set) {
-            if (!seen.has(task.gid)) {
+            if (!seen.has(task.gid) && task.assignee && selectedSet.has(task.assignee.gid)) {
               seen.add(task.gid);
               tasks.push(task);
             }
@@ -175,11 +176,11 @@ class AsanaAPI {
       }
 
       // Apply exclusion filters
-      tasks = this._applyExclusions(tasks, 'task', settings);
+      tasks = this._applyFilters(tasks, 'task', settings);
 
       // Fetch projects
       let projects = await this.getProjects(workspaceGid);
-      projects = this._applyExclusions(projects, 'project', settings);
+      projects = this._applyFilters(projects, 'project', settings);
 
       // Cache results
       this._store.setCachedTasks(tasks);
@@ -197,17 +198,25 @@ class AsanaAPI {
     }
   }
 
-  _applyExclusions(items, type, settings) {
+  _applyFilters(items, type, settings) {
     const gidList = type === 'task' ? (settings.excludedTaskGids || []) : (settings.excludedProjectGids || []);
-    const patterns = type === 'task' ? (settings.excludedTaskPatterns || []) : (settings.excludedProjectPatterns || []);
+    const excludePatterns = type === 'task' ? (settings.excludedTaskPatterns || []) : (settings.excludedProjectPatterns || []);
+    const includePatterns = type === 'task' ? (settings.includedTaskPatterns || []) : (settings.includedProjectPatterns || []);
 
     return items.filter(item => {
+      const name = (item.name || '').toLowerCase();
+
+      // Inclusion filter: if any patterns defined, name must match at least one
+      if (includePatterns.length > 0) {
+        const matchesAny = includePatterns.some(p => p && name.includes(p.toLowerCase()));
+        if (!matchesAny) return false;
+      }
+
       // Exclude by GID
       if (gidList.includes(item.gid)) return false;
 
       // Exclude by name pattern (case-insensitive partial match)
-      const name = (item.name || '').toLowerCase();
-      for (const pattern of patterns) {
+      for (const pattern of excludePatterns) {
         if (pattern && name.includes(pattern.toLowerCase())) return false;
       }
 

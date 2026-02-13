@@ -5,6 +5,18 @@ All notable changes to Panorasana will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-02-13
+
+### Added
+- "Only my projects" filter checkbox on the Projects tab
+- Inclusion filter lists for tasks and projects (show only items matching a pattern)
+- Right-click context menu on tasks and projects: "Exclude" and "Copy GID"
+- Project membership data fetched from Asana API (`members.gid`)
+
+### Fixed
+- "Show only my tasks" now correctly filters to directly-assigned tasks only (Asana search API was returning collaborator/follower tasks)
+- `currentUserId` was not being read from settings (typo: `iAmUserId` → `currentUserId`), breaking comment highlight suppression
+
 ## [0.1.0] - 2026-02-13
 
 ### Added

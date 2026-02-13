@@ -1,4 +1,4 @@
-const { ipcMain, app } = require('electron');
+const { ipcMain, app, Menu } = require('electron');
 
 // ══════════════════════════════════════════════════════════════════════════════
 // IPC HANDLER REGISTRATION
@@ -57,15 +57,10 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
     }
 
     const trimmedKey = key.trim();
-    console.log('[ipc] Verifying API key, length:', trimmedKey.length, 'starts with:', trimmedKey.substring(0, 2));
 
     // Temporarily set the key for verification
     const encrypted = store.encryptApiKey(trimmedKey);
     store.setSettings({ apiKey: encrypted });
-
-    // Verify round-trip encryption
-    const decrypted = store.decryptApiKey(encrypted);
-    console.log('[ipc] Decrypt round-trip OK:', decrypted === trimmedKey, 'decrypted length:', decrypted?.length);
 
     const result = await asanaApi.verifyApiKey();
 
@@ -160,6 +155,34 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
     if (settingsWin && !settingsWin.isDestroyed()) {
       settingsWin.close();
     }
+  });
+
+  // ── Context Menu ──────────────────────────────────────────
+
+  ipcMain.on('context-menu:item', (event, { type, name, gid }) => {
+    const excludeKey = type === 'task' ? 'excludedTaskPatterns' : 'excludedProjectPatterns';
+    const template = [
+      {
+        label: `Exclude "${name.length > 30 ? name.substring(0, 30) + '…' : name}"`,
+        click: () => {
+          const settings = store.getSettings();
+          const list = [...(settings[excludeKey] || []), name];
+          store.setSettings({ [excludeKey]: list });
+          // Re-poll to apply the new exclusion immediately
+          asanaApi._poll();
+        }
+      },
+      { type: 'separator' },
+      {
+        label: 'Copy GID',
+        click: () => {
+          const { clipboard } = require('electron');
+          clipboard.writeText(gid);
+        }
+      }
+    ];
+    const menu = Menu.buildFromTemplate(template);
+    menu.popup({ window: getMainWindow() });
   });
 }
 

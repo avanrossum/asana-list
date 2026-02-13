@@ -45,6 +45,8 @@ const DEFAULT_SETTINGS = {
   excludedTaskPatterns: [],
   excludedProjectGids: [],
   excludedProjectPatterns: [],
+  includedTaskPatterns: [],
+  includedProjectPatterns: [],
   apiKey: null,
   apiKeyVerified: false,
   windowBounds: null

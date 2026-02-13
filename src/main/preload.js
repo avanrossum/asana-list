@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSeenTimestamps: () => ipcRenderer.invoke('store:get-seen-timestamps'),
   setSeenTimestamp: (taskGid, timestamp) => ipcRenderer.invoke('store:set-seen-timestamp', taskGid, timestamp),
 
+  // ── Context Menu ────────────────────────────────────────────
+  showItemContextMenu: ({ type, name, gid }) => ipcRenderer.send('context-menu:item', { type, name, gid }),
+
   // ── Window Controls ─────────────────────────────────────────
   hideWindow: () => ipcRenderer.send('window:hide'),
   openSettings: () => ipcRenderer.send('window:open-settings'),

@@ -4,7 +4,7 @@
 
 Open-source Asana task and project visibility tool for macOS. Displays a searchable list of incomplete tasks and active projects with comment tracking and auto-updates.
 
-## Current Version: 0.1.0
+## Current Version: 0.2.0
 
 ### Core Features (v0.1.0)
 - [x] Searchable task list with sorting
@@ -19,6 +19,23 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [x] Tray-only app (hidden from Dock/Cmd+Tab)
 - [x] Auto-update via GitHub releases
 - [x] Copy GID / Open Task buttons
+
+### v0.2.0 Additions
+- [x] "Only my projects" filter checkbox
+- [x] Inclusion filter lists (tasks + projects)
+- [x] Right-click context menu (exclude item, copy GID)
+- [x] Fix: "Show only my tasks" now filters to direct assignments only
+- [x] Fix: `currentUserId` settings read correctly
+
+## Immediate Fixes
+
+- [ ] Always on top (all windows)
+- [ ] Remove macOS "traffic light" window controls
+- [ ] Total tasks appears limited to 100 (pagination issue)
+
+## Immediate Features
+
+- [ ] "Projects" dropdown above task list — filter tasks to a single project (obeys exclusion/inclusion lists, "show only my tasks", and "show tasks for" user lists)
 
 ## Feature Backlog
 
@@ -55,6 +72,7 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 ## Gotchas
 
 - Asana search API has rate limits; polling interval should be >= 1 minute
+- Asana search API `assignee` parameter returns collaborator/follower tasks, not just direct assignments — requires client-side post-filtering
 - Template images for tray must be black-on-transparent PNG
 - `app.dock.hide()` must be called before window creation
 - Global hotkey registration can fail silently if another app holds it

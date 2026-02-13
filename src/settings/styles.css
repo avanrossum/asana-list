@@ -192,6 +192,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   text-decoration: underline;
 }
 
+.filter-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
 .btn-primary {
   background: var(--accent);
   color: #ffffff;

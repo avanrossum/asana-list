@@ -63,6 +63,11 @@ export default function TaskItem({ task, lastSeenModified, onMarkSeen, currentUs
     }
   }, [task.gid]);
 
+  const handleContextMenu = useCallback((e) => {
+    e.preventDefault();
+    window.electronAPI.showItemContextMenu({ type: 'task', name: task.name, gid: task.gid });
+  }, [task.name, task.gid]);
+
   // Format due date
   const dueDate = task.due_on || task.due_at;
   let dueDateText = '';
@@ -91,7 +96,7 @@ export default function TaskItem({ task, lastSeenModified, onMarkSeen, currentUs
   const sectionName = task.memberships?.[0]?.section?.name;
 
   return (
-    <div className={`task-item ${hasNewActivity ? 'highlighted' : ''}`}>
+    <div className={`task-item ${hasNewActivity ? 'highlighted' : ''}`} onContextMenu={handleContextMenu}>
       <div className="task-item-header" onClick={handleToggleComments}>
         <div className="task-item-content">
           <div className="task-item-name">{task.name}</div>

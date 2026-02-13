@@ -7,7 +7,9 @@ A fast, focused Asana visibility tool for macOS. Lives in your menu bar, shows y
 - **Task List** - Searchable, sortable list of all incomplete tasks
 - **Project List** - Searchable list of all active projects
 - **Comment Tracking** - Toggle comments on any task; highlights when new comments arrive
-- **Smart Filtering** - Filter by user, exclude tasks/projects by name or GID
+- **Smart Filtering** - Filter by user, exclude or include tasks/projects by name pattern
+- **"Only My Projects" Filter** - Quick checkbox to show only projects you're a member of
+- **Right-Click Context Menu** - Right-click any task or project to exclude it or copy its GID
 - **Dark/Light/System Theme** - 7 accent colors, matches your macOS appearance
 - **Global Hotkey** - Ctrl+Shift+A to toggle visibility (configurable)
 - **Auto-Updates** - Automatic update checks via GitHub releases

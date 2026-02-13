@@ -92,10 +92,15 @@ function ProjectItem({ project }) {
     }
   }, [project.gid]);
 
+  const handleContextMenu = useCallback((e) => {
+    e.preventDefault();
+    window.electronAPI.showItemContextMenu({ type: 'project', name: project.name, gid: project.gid });
+  }, [project.name, project.gid]);
+
   const dotColor = PROJECT_COLORS[project.color] || PROJECT_COLORS.none;
 
   return (
-    <div className="project-item">
+    <div className="project-item" onContextMenu={handleContextMenu}>
       <span className="project-color-dot" style={{ background: dotColor }} />
       <div className="project-item-content">
         <div className="project-item-name">{project.name}</div>
