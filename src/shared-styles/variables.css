@@ -1,0 +1,89 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   SHARED CSS VARIABLES
+   Single source of truth for design tokens.
+   Used by both the main app (via @import) and settings window (via <link>).
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+[data-theme="dark"] {
+  --bg-primary: #1a1d23;
+  --bg-surface: #242830;
+  --bg-surface-rgb: 36, 40, 48;
+  --bg-elevated: #2a2e38;
+  --bg-elevated-rgb: 42, 46, 56;
+  --bg-hover: #2e3340;
+  --border-color: #2e3340;
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --text-primary: #e8e8e8;
+  --text-secondary: #8890a0;
+  --text-muted: #5a6070;
+  --success: #4caf50;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --input-bg: #1e2128;
+  --input-border: #363c4a;
+  --modal-overlay: rgba(0, 0, 0, 0.6);
+  --scrollbar-thumb: #3a3f4b;
+  --scrollbar-track: transparent;
+  --button-bg: #2e3340;
+  --button-hover: #363c4a;
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --tag-bg: #2e3340;
+  --tag-text: #8890a0;
+  --dropdown-bg: #242830;
+  --dropdown-hover: #2e3340;
+  --highlight-bg: rgba(59, 130, 246, 0.15);
+  --highlight-border: rgba(59, 130, 246, 0.3);
+}
+
+/* Accent color overrides - dark theme */
+[data-theme="dark"][data-accent="blue"] { --accent: #3b82f6; --accent-hover: #60a5fa; }
+[data-theme="dark"][data-accent="pink"] { --accent: #ec4899; --accent-hover: #f472b6; }
+[data-theme="dark"][data-accent="amber"] { --accent: #f59e0b; --accent-hover: #fbbf24; }
+[data-theme="dark"][data-accent="green"] { --accent: #10b981; --accent-hover: #34d399; }
+[data-theme="dark"][data-accent="orange"] { --accent: #f97316; --accent-hover: #fb923c; }
+[data-theme="dark"][data-accent="red"] { --accent: #f43f5e; --accent-hover: #fb7185; }
+[data-theme="dark"][data-accent="purple"] { --accent: #8b5cf6; --accent-hover: #a78bfa; }
+
+[data-theme="light"] {
+  --bg-primary: #f5f5f7;
+  --bg-surface: #ffffff;
+  --bg-surface-rgb: 255, 255, 255;
+  --bg-elevated: #ffffff;
+  --bg-elevated-rgb: 255, 255, 255;
+  --bg-hover: #eeeef0;
+  --border-color: #e0e0e0;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --text-primary: #1a1d23;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --success: #4caf50;
+  --warning: #d97706;
+  --error: #dc2626;
+  --input-bg: #f0f0f2;
+  --input-border: #d1d5db;
+  --modal-overlay: rgba(0, 0, 0, 0.3);
+  --scrollbar-thumb: #c0c0c0;
+  --scrollbar-track: transparent;
+  --button-bg: #e8e8ea;
+  --button-hover: #d0d0d4;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --tag-bg: #e8e8ea;
+  --tag-text: #6b7280;
+  --dropdown-bg: #ffffff;
+  --dropdown-hover: #f0f0f2;
+  --highlight-bg: rgba(37, 99, 235, 0.1);
+  --highlight-border: rgba(37, 99, 235, 0.25);
+}
+
+/* Accent color overrides - light theme */
+[data-theme="light"][data-accent="blue"] { --accent: #2563eb; --accent-hover: #1d4ed8; }
+[data-theme="light"][data-accent="pink"] { --accent: #db2777; --accent-hover: #be185d; }
+[data-theme="light"][data-accent="amber"] { --accent: #d97706; --accent-hover: #b45309; }
+[data-theme="light"][data-accent="green"] { --accent: #059669; --accent-hover: #047857; }
+[data-theme="light"][data-accent="orange"] { --accent: #ea580c; --accent-hover: #c2410c; }
+[data-theme="light"][data-accent="red"] { --accent: #e11d48; --accent-hover: #be123c; }
+[data-theme="light"][data-accent="purple"] { --accent: #7c3aed; --accent-hover: #6d28d9; }

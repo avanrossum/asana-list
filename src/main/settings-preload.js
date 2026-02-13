@@ -1,0 +1,38 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('settingsAPI', {
+  // ── Settings ────────────────────────────────────────────────
+  getSettings: () => ipcRenderer.invoke('store:get-settings'),
+  setSettings: (updates) => ipcRenderer.invoke('store:set-settings', updates),
+
+  // ── API Key ─────────────────────────────────────────────────
+  verifyApiKey: (key) => ipcRenderer.invoke('asana:verify-api-key', key),
+  removeApiKey: () => ipcRenderer.invoke('asana:remove-api-key'),
+
+  // ── Users ───────────────────────────────────────────────────
+  getUsers: () => ipcRenderer.invoke('asana:get-users'),
+
+  // ── Theme ───────────────────────────────────────────────────
+  applyTheme: (theme) => ipcRenderer.send('app:apply-theme', theme),
+  applyAccent: (accent) => ipcRenderer.send('app:apply-accent', accent),
+
+  // ── App ─────────────────────────────────────────────────────
+  getVersion: () => ipcRenderer.invoke('app:get-version'),
+  checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),
+  quit: () => ipcRenderer.send('app:quit'),
+
+  // ── Window ──────────────────────────────────────────────────
+  closeSettings: () => ipcRenderer.send('settings:close'),
+
+  // ── Events ──────────────────────────────────────────────────
+  onThemeChanged: (callback) => {
+    const handler = (_, theme) => callback(theme);
+    ipcRenderer.on('theme:changed', handler);
+    return () => ipcRenderer.removeListener('theme:changed', handler);
+  },
+  onAccentChanged: (callback) => {
+    const handler = (_, accent) => callback(accent);
+    ipcRenderer.on('accent:changed', handler);
+    return () => ipcRenderer.removeListener('accent:changed', handler);
+  }
+});
