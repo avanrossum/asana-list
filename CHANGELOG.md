@@ -5,6 +5,14 @@ All notable changes to Panoptisana will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-02-14
+
+### Fixed
+- Task list no longer capped at 100 items — Asana search endpoint uses manual `created_at`-based pagination to fetch all incomplete tasks
+
+### Added
+- "Task Fetch Limit" setting in General section — configurable page cap (1-100 pages, 100 tasks per page) with warning for high values
+
 ## [0.2.2] - 2026-02-14
 
 ### Added

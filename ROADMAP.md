@@ -4,7 +4,7 @@
 
 Open-source Asana task and project visibility tool for macOS. Displays a searchable list of incomplete tasks and active projects with comment tracking and auto-updates.
 
-## Current Version: 0.2.2
+## Current Version: 0.2.3
 
 ### Core Features (v0.1.0)
 - [x] Searchable task list with sorting
@@ -51,9 +51,9 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [x] Close button in settings window title bar
 - [x] App icon resized to 512x512 (electron-builder requirement)
 
-## Immediate Fixes
-
-- [ ] Total tasks appears limited to 100 (pagination issue)
+### v0.2.3 Additions
+- [x] Fix: Task list capped at 100 (search endpoint pagination with manual `created_at`-based fallback)
+- [x] Settings: Configurable task fetch page limit
 
 ## Immediate Features
 
@@ -119,3 +119,4 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - Template images for tray must be black-on-transparent PNG
 - `app.dock.hide()` must be called before window creation
 - Global hotkey registration can fail silently if another app holds it
+- Asana `/tasks/search` endpoint does not support standard `next_page`/`offset` pagination — requires manual `created_at.after` pagination sorted ascending

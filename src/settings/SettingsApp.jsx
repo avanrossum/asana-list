@@ -144,6 +144,15 @@ export default function SettingsApp() {
     }
   }, [updateSetting]);
 
+  // ── Task Fetch Limit ───────────────────────────────────────
+
+  const handleMaxSearchPagesChange = useCallback((e) => {
+    const val = parseInt(e.target.value, 10);
+    if (val && val >= 1 && val <= 100) {
+      updateSetting('maxSearchPages', val);
+    }
+  }, [updateSetting]);
+
   // ── Hotkey ──────────────────────────────────────────────────
 
   const handleHotkeyChange = useCallback((e) => {
@@ -271,6 +280,26 @@ export default function SettingsApp() {
               <span className="polling-unit">minutes</span>
             </div>
           </div>
+
+          <div className="form-row">
+            <span className="form-label">Task Fetch Limit</span>
+            <div className="polling-row">
+              <input
+                className="polling-input"
+                type="number"
+                min="1"
+                max="100"
+                value={settings.maxSearchPages || 20}
+                onChange={handleMaxSearchPagesChange}
+              />
+              <span className="polling-unit">pages (100 tasks each)</span>
+            </div>
+          </div>
+          {(settings.maxSearchPages || 20) > 30 && (
+            <div className="api-key-hint" style={{ marginTop: '-4px' }}>
+              High page limits increase API calls per poll. Each page is one Asana API request.
+            </div>
+          )}
         </div>
 
         {/* ── User Selection ── */}

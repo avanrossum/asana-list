@@ -6,6 +6,7 @@
 
 const BASE_URL = 'https://app.asana.com/api/1.0';
 const MAX_RETRIES = 3;
+const DEFAULT_MAX_SEARCH_PAGES = 20; // Default safety cap: 2,000 tasks
 
 class AsanaAPI {
   constructor({ store, getApiKey }) {
@@ -68,6 +69,66 @@ class AsanaAPI {
     return allData;
   }
 
+  // Paginate through all results for the search endpoint.
+  // The search API may not support standard next_page/offset pagination.
+  // Falls back to manual pagination via created_at.after when next_page is absent.
+  // Requires the endpoint to sort by created_at ascending for stable ordering.
+  async _fetchAllSearch(endpoint, { maxPages = DEFAULT_MAX_SEARCH_PAGES, ...options } = {}) {
+    const allData = [];
+    const seenGids = new Set();
+    const limit = 100;
+    const separator = endpoint.includes('?') ? '&' : '?';
+    let offset = null;
+    let afterDate = null;
+
+    for (let page = 0; page < maxPages; page++) {
+      // Build page URL
+      let pageUrl = `${endpoint}${separator}limit=${limit}`;
+      if (offset) {
+        pageUrl += `&offset=${offset}`;
+      } else if (afterDate) {
+        pageUrl += `&created_at.after=${afterDate}`;
+      }
+
+      const result = await this._fetch(pageUrl, options);
+      const pageData = result.data || [];
+
+      // Deduplicate by GID (search results can be unstable across pages)
+      for (const item of pageData) {
+        if (!seenGids.has(item.gid)) {
+          seenGids.add(item.gid);
+          allData.push(item);
+        }
+      }
+
+      // Determine next page strategy
+      if (result.next_page?.offset) {
+        // Standard pagination available — use it
+        offset = result.next_page.offset;
+        afterDate = null;
+      } else if (pageData.length >= limit) {
+        // No next_page but got a full page — paginate manually via created_at
+        const lastItem = pageData[pageData.length - 1];
+        if (lastItem?.created_at) {
+          afterDate = lastItem.created_at;
+          offset = null;
+        } else {
+          break; // No created_at on last item — can't paginate further
+        }
+      } else {
+        break; // Partial page — we've fetched everything
+      }
+    }
+
+    if (allData.length > 0) {
+      const pagesUsed = Math.ceil(allData.length / limit);
+      const hitCap = pagesUsed >= maxPages;
+      console.log(`[asana-api] Search fetched ${allData.length} tasks across ${pagesUsed} page(s)${hitCap ? ` (hit ${maxPages}-page cap)` : ''}`);
+    }
+
+    return allData;
+  }
+
   // ── API Methods ─────────────────────────────────────────────
 
   async verifyApiKey() {
@@ -91,13 +152,17 @@ class AsanaAPI {
   async getTasks(workspaceGid, assigneeGid) {
     const fields = 'name,assignee.name,assignee.gid,completed,due_on,due_at,modified_at,created_at,num_subtasks,projects.name,projects.gid,memberships.section.name';
     const assigneeParam = assigneeGid ? `&assignee=${assigneeGid}` : '';
+    const settings = this._store.getSettings();
+    const maxPages = settings.maxSearchPages || DEFAULT_MAX_SEARCH_PAGES;
 
-    // Asana's search API for incomplete tasks
-    const result = await this._fetchAll(
-      `/workspaces/${workspaceGid}/tasks/search?completed=false&opt_fields=${fields}&sort_by=modified_at&sort_ascending=false${assigneeParam}`
+    // Asana's search API for incomplete tasks.
+    // Sort by created_at ascending for stable manual pagination
+    // (created_at is immutable, unlike modified_at). Display sort
+    // is handled in the renderer.
+    return this._fetchAllSearch(
+      `/workspaces/${workspaceGid}/tasks/search?completed=false&opt_fields=${fields}&sort_by=created_at&sort_ascending=true${assigneeParam}`,
+      { maxPages }
     );
-
-    return result;
   }
 
   async getProjects(workspaceGid) {
