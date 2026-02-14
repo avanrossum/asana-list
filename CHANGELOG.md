@@ -5,6 +5,14 @@ All notable changes to Panoptisana will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-02-14
+
+### Added
+- "Project" filter dropdown above task list — filter tasks to a single project (populated from projects referenced on tasks, sorted alphabetically)
+- Status bar count reflects active filters (project dropdown, search, "Only my projects" checkbox)
+- Auto-clear: project filter resets if the selected project disappears from task data after a poll
+- Context-aware empty state messages when project filter yields no results
+
 ## [0.2.4] - 2026-02-14
 
 ### Added

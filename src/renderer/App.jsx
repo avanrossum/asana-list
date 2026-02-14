@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import TaskList from './components/TaskList';
 import ProjectList from './components/ProjectList';
 import Icon from './components/Icon';
@@ -26,6 +26,7 @@ export default function App() {
   const [seenTimestamps, setSeenTimestamps] = useState({});
   const [currentUserId, setCurrentUserId] = useState(null);
   const [myProjectsOnly, setMyProjectsOnly] = useState(false);
+  const [selectedProjectGid, setSelectedProjectGid] = useState('');
   const searchRef = useRef(null);
 
   // ── Init ────────────────────────────────────────────────────
@@ -107,6 +108,59 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // ── Derived Data ───────────────────────────────────────────
+
+  // Build sorted project list from tasks for the project filter dropdown.
+  // Uses projects referenced on tasks (not the Projects tab data) so the
+  // dropdown only shows projects that actually have incomplete tasks.
+  const taskProjects = useMemo(() => {
+    const map = new Map();
+    for (const task of tasks) {
+      for (const p of task.projects || []) {
+        if (p.gid && p.name && !map.has(p.gid)) {
+          map.set(p.gid, p.name);
+        }
+      }
+    }
+    return Array.from(map.entries())
+      .map(([gid, name]) => ({ gid, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [tasks]);
+
+  // Count of tasks visible after project filter (before search/sort in TaskList)
+  const visibleTaskCount = useMemo(() => {
+    if (!selectedProjectGid) return tasks.length;
+    return tasks.filter(t =>
+      (t.projects || []).some(p => p.gid === selectedProjectGid)
+    ).length;
+  }, [tasks, selectedProjectGid]);
+
+  // Count of projects visible after membership + search filters
+  const visibleProjectCount = useMemo(() => {
+    let result = projects;
+    if (myProjectsOnly && currentUserId) {
+      result = result.filter(p =>
+        (p.members || []).some(m => m.gid === currentUserId)
+      );
+    }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(p => {
+        const name = (p.name || '').toLowerCase();
+        const owner = (p.owner?.name || '').toLowerCase();
+        return name.includes(q) || owner.includes(q);
+      });
+    }
+    return result.length;
+  }, [projects, myProjectsOnly, currentUserId, searchQuery]);
+
+  // Clear project filter if the selected project no longer exists in task data
+  useEffect(() => {
+    if (selectedProjectGid && !taskProjects.some(p => p.gid === selectedProjectGid)) {
+      setSelectedProjectGid('');
+    }
+  }, [taskProjects, selectedProjectGid]);
 
   // ── Handlers ────────────────────────────────────────────────
 
@@ -203,7 +257,19 @@ export default function App() {
       {/* Sort / Filter Bar */}
       {activeTab === 'tasks' && (
         <div className="sort-bar">
-          <span className="sort-label">Sort by:</span>
+          <span className="sort-label">Project:</span>
+          <select
+            className="sort-select project-filter-select"
+            value={selectedProjectGid}
+            onChange={(e) => setSelectedProjectGid(e.target.value)}
+          >
+            <option value="">All Projects</option>
+            {taskProjects.map(p => (
+              <option key={p.gid} value={p.gid}>{p.name}</option>
+            ))}
+          </select>
+          <span className="sort-divider" />
+          <span className="sort-label">Sort:</span>
           <select
             className="sort-select"
             value={sortBy}
@@ -248,6 +314,7 @@ export default function App() {
             tasks={tasks}
             searchQuery={searchQuery}
             sortBy={sortBy}
+            selectedProjectGid={selectedProjectGid}
             seenTimestamps={seenTimestamps}
             onMarkSeen={handleMarkSeen}
             currentUserId={currentUserId}
@@ -272,8 +339,8 @@ export default function App() {
               : isPolling
                 ? 'Refreshing...'
                 : activeTab === 'tasks'
-                  ? `${tasks.length}${unfilteredTaskCount != null && unfilteredTaskCount !== tasks.length ? ` of ${unfilteredTaskCount}` : ''} tasks`
-                  : `${projects.length}${unfilteredProjectCount != null && unfilteredProjectCount !== projects.length ? ` of ${unfilteredProjectCount}` : ''} projects`
+                  ? `${visibleTaskCount}${unfilteredTaskCount != null && unfilteredTaskCount !== visibleTaskCount ? ` of ${unfilteredTaskCount}` : ''} tasks`
+                  : `${visibleProjectCount}${unfilteredProjectCount != null && unfilteredProjectCount !== visibleProjectCount ? ` of ${unfilteredProjectCount}` : ''} projects`
             }
           </span>
         </div>

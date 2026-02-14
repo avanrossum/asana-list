@@ -156,6 +156,18 @@
   border-color: var(--accent);
 }
 
+.project-filter-select {
+  max-width: 140px;
+  text-overflow: ellipsis;
+}
+
+.sort-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--border-color);
+  flex-shrink: 0;
+}
+
 /* ── Filter Bar ── */
 .filter-bar {
   display: flex;

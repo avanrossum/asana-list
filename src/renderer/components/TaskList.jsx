@@ -1,9 +1,16 @@
 import { useMemo } from 'react';
 import TaskItem from './TaskItem';
 
-export default function TaskList({ tasks, searchQuery, sortBy, seenTimestamps, onMarkSeen, currentUserId }) {
+export default function TaskList({ tasks, searchQuery, sortBy, selectedProjectGid, seenTimestamps, onMarkSeen, currentUserId }) {
   const filteredAndSorted = useMemo(() => {
     let result = [...tasks];
+
+    // Filter by project
+    if (selectedProjectGid) {
+      result = result.filter(t =>
+        (t.projects || []).some(p => p.gid === selectedProjectGid)
+      );
+    }
 
     // Filter by search
     if (searchQuery) {
@@ -38,13 +45,19 @@ export default function TaskList({ tasks, searchQuery, sortBy, seenTimestamps, o
     });
 
     return result;
-  }, [tasks, searchQuery, sortBy]);
+  }, [tasks, searchQuery, sortBy, selectedProjectGid]);
 
   if (filteredAndSorted.length === 0 && tasks.length > 0) {
     return (
       <div className="empty-state">
         <div className="empty-state-title">No matching tasks</div>
-        <div className="empty-state-text">Try a different search term.</div>
+        <div className="empty-state-text">
+          {selectedProjectGid && searchQuery
+            ? 'Try a different search term or project.'
+            : selectedProjectGid
+              ? 'No tasks in this project.'
+              : 'Try a different search term.'}
+        </div>
       </div>
     );
   }
