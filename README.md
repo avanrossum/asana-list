@@ -1,4 +1,4 @@
-# Panorasana
+# Panoptisana
 
 A fast, focused Asana visibility tool for macOS. Lives in your menu bar, shows your tasks and projects at a glance.
 
@@ -13,7 +13,7 @@ A fast, focused Asana visibility tool for macOS. Lives in your menu bar, shows y
 - **Dark/Light/System Theme** - 7 accent colors, matches your macOS appearance
 - **Global Hotkey** - Ctrl+Shift+A to toggle visibility (configurable)
 - **Auto-Updates** - Automatic update checks via GitHub releases
-- **Encrypted API Key** - Your Asana API key is encrypted at rest (AES-256-GCM)
+- **Encrypted API Key** - Your Asana API key is stored securely via the OS Keychain
 
 ## Getting Started
 
@@ -37,18 +37,18 @@ npm run dev
 
 ### Getting an Asana Personal Access Token
 
-Panorasana needs a Personal Access Token (PAT) — not an app client secret. To create one:
+Panoptisana needs a Personal Access Token (PAT) — not an app client secret. To create one:
 
 1. Go to the [Asana Developer Console](https://app.asana.com/0/my-apps)
 2. Under **Personal access tokens**, click **Create new token**
-3. Give it a name (e.g. "Panorasana") and click **Create token**
+3. Give it a name (e.g. "Panoptisana") and click **Create token**
 4. Copy the token (it starts with `1/`) — you won't be able to see it again
 
 The token is stored encrypted on your machine and is never sent anywhere except directly to Asana's API.
 
 ### Setup
 
-1. Launch Panorasana (it appears as a menu bar icon)
+1. Launch Panoptisana (it appears as a menu bar icon)
 2. Click the gear icon or right-click the tray icon to open Settings
 3. Paste your Personal Access Token and click **Verify**
 4. Select yourself from the "I am" dropdown
@@ -61,6 +61,10 @@ npm run dev          # Dev mode (Vite HMR + Electron)
 npm run build        # Production build
 npm run pack         # Package without signing
 ```
+
+## Known Limitations
+
+- **Single workspace only** — Panoptisana uses the first workspace returned by the Asana API. If your account belongs to multiple workspaces or organizations, only the first one is visible. Multi-workspace support is on the [roadmap](ROADMAP.md).
 
 ## Tech Stack
 

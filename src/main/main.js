@@ -78,7 +78,8 @@ function showUpdateDialog(mode, options) {
     webPreferences: {
       preload: path.join(__dirname, 'update-dialog-preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      sandbox: true
     }
   });
 
@@ -157,7 +158,7 @@ autoUpdater.on('download-progress', (progress) => {
       skipTaskbar: true,
       show: false,
       backgroundColor: '#1a1d23',
-      webPreferences: { nodeIntegration: false, contextIsolation: true }
+      webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true }
     });
 
     const html = `<!DOCTYPE html><html><body style="margin:0;padding:16px;background:#1a1d23;color:#fff;font-family:-apple-system,system-ui,sans-serif;font-size:13px;">
@@ -324,7 +325,8 @@ function createMainWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      sandbox: true
     }
   });
 
@@ -396,7 +398,8 @@ function openSettings() {
     webPreferences: {
       preload: path.join(__dirname, 'settings-preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      sandbox: true
     }
   });
 
@@ -425,6 +428,11 @@ function openSettings() {
 // Handle settings open from both renderer and tray
 ipcMain.on('window:open-settings', () => {
   openSettings();
+});
+
+// Re-register global hotkey when changed in settings
+ipcMain.on('app:re-register-hotkey', () => {
+  registerGlobalHotkey();
 });
 
 // ══════════════════════════════════════════════════════════════════════════════

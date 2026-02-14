@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { applyTheme } from '../shared/applyTheme';
+import { useThemeListener } from '../shared/useThemeListener';
+import FilterListEditor from './components/FilterListEditor';
 
 const ACCENT_COLORS = [
   { name: 'blue', dark: '#3b82f6', light: '#2563eb' },
@@ -18,12 +21,6 @@ export default function SettingsApp() {
   const [users, setUsers] = useState([]);
   const [version, setVersion] = useState('');
 
-  // Exclusion/Inclusion inputs
-  const [taskExclusionInput, setTaskExclusionInput] = useState('');
-  const [projectExclusionInput, setProjectExclusionInput] = useState('');
-  const [taskInclusionInput, setTaskInclusionInput] = useState('');
-  const [projectInclusionInput, setProjectInclusionInput] = useState('');
-
   // ── Init ────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -31,11 +28,7 @@ export default function SettingsApp() {
       const s = await window.settingsAPI.getSettings();
       setSettings(s);
 
-      const theme = s.theme === 'system'
-        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-        : s.theme;
-      document.documentElement.dataset.theme = theme || 'dark';
-      document.documentElement.dataset.accent = s.accentColor || 'blue';
+      applyTheme(s);
 
       const u = await window.settingsAPI.getUsers();
       setUsers(u || []);
@@ -48,21 +41,7 @@ export default function SettingsApp() {
 
   // ── Theme Events ────────────────────────────────────────────
 
-  useEffect(() => {
-    const unsubTheme = window.settingsAPI.onThemeChanged((theme) => {
-      document.documentElement.classList.add('theme-transitioning');
-      document.documentElement.dataset.theme = theme;
-      requestAnimationFrame(() => {
-        document.documentElement.classList.remove('theme-transitioning');
-      });
-    });
-
-    const unsubAccent = window.settingsAPI.onAccentChanged((accent) => {
-      document.documentElement.dataset.accent = accent;
-    });
-
-    return () => { unsubTheme(); unsubAccent(); };
-  }, []);
+  useThemeListener(window.settingsAPI);
 
   // ── Helpers ─────────────────────────────────────────────────
 
@@ -136,47 +115,23 @@ export default function SettingsApp() {
     });
   }, []);
 
-  // ── Exclusions ──────────────────────────────────────────────
+  // ── Filter List Helpers (shared add/remove for all 4 lists) ─
 
-  const addExclusion = useCallback((type, value) => {
+  const addFilterItem = useCallback((settingsKey, value) => {
     if (!value.trim()) return;
-    const key = type === 'task' ? 'excludedTaskPatterns' : 'excludedProjectPatterns';
     setSettings(prev => {
-      const list = [...(prev[key] || []), value.trim()];
-      window.settingsAPI.setSettings({ [key]: list });
-      return { ...prev, [key]: list };
+      const list = [...(prev[settingsKey] || []), value.trim()];
+      window.settingsAPI.setSettings({ [settingsKey]: list });
+      return { ...prev, [settingsKey]: list };
     });
   }, []);
 
-  const removeExclusion = useCallback((type, index) => {
-    const key = type === 'task' ? 'excludedTaskPatterns' : 'excludedProjectPatterns';
+  const removeFilterItem = useCallback((settingsKey, index) => {
     setSettings(prev => {
-      const list = [...(prev[key] || [])];
+      const list = [...(prev[settingsKey] || [])];
       list.splice(index, 1);
-      window.settingsAPI.setSettings({ [key]: list });
-      return { ...prev, [key]: list };
-    });
-  }, []);
-
-  // ── Inclusions ─────────────────────────────────────────────
-
-  const addInclusion = useCallback((type, value) => {
-    if (!value.trim()) return;
-    const key = type === 'task' ? 'includedTaskPatterns' : 'includedProjectPatterns';
-    setSettings(prev => {
-      const list = [...(prev[key] || []), value.trim()];
-      window.settingsAPI.setSettings({ [key]: list });
-      return { ...prev, [key]: list };
-    });
-  }, []);
-
-  const removeInclusion = useCallback((type, index) => {
-    const key = type === 'task' ? 'includedTaskPatterns' : 'includedProjectPatterns';
-    setSettings(prev => {
-      const list = [...(prev[key] || [])];
-      list.splice(index, 1);
-      window.settingsAPI.setSettings({ [key]: list });
-      return { ...prev, [key]: list };
+      window.settingsAPI.setSettings({ [settingsKey]: list });
+      return { ...prev, [settingsKey]: list };
     });
   }, []);
 
@@ -193,6 +148,8 @@ export default function SettingsApp() {
 
   const handleHotkeyChange = useCallback((e) => {
     updateSetting('globalHotkey', e.target.value);
+    // Re-register the global hotkey in the main process
+    window.settingsAPI.reRegisterHotkey();
   }, [updateSetting]);
 
   if (!settings) return null;
@@ -368,156 +325,54 @@ export default function SettingsApp() {
           <div className="settings-section-title">Inclusion Filters</div>
           <div className="filter-hint">When set, only items matching at least one pattern will be shown.</div>
 
-          <div className="form-label">Included Tasks (name pattern)</div>
-          <div className="exclusion-list">
-            <div className="exclusion-add-row">
-              <input
-                type="text"
-                placeholder="Partial name match..."
-                value={taskInclusionInput}
-                onChange={(e) => setTaskInclusionInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    addInclusion('task', taskInclusionInput);
-                    setTaskInclusionInput('');
-                  }
-                }}
-              />
-              <button onClick={() => {
-                addInclusion('task', taskInclusionInput);
-                setTaskInclusionInput('');
-              }}>+ Add</button>
-            </div>
-            {(settings.includedTaskPatterns || []).length > 0 && (
-              <div className="exclusion-items">
-                {(settings.includedTaskPatterns || []).map((item, i) => (
-                  <div key={i} className="exclusion-item">
-                    <span className="exclusion-item-text">{item}</span>
-                    <button className="exclusion-delete-btn" onClick={() => removeInclusion('task', i)}>
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <FilterListEditor
+            label="Included Tasks (name pattern)"
+            placeholder="Partial name match..."
+            items={settings.includedTaskPatterns || []}
+            onAdd={(value) => addFilterItem('includedTaskPatterns', value)}
+            onRemove={(index) => removeFilterItem('includedTaskPatterns', index)}
+          />
 
-          <div className="form-label" style={{ marginTop: '12px' }}>Included Projects (name pattern)</div>
-          <div className="exclusion-list">
-            <div className="exclusion-add-row">
-              <input
-                type="text"
-                placeholder="Partial name match..."
-                value={projectInclusionInput}
-                onChange={(e) => setProjectInclusionInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    addInclusion('project', projectInclusionInput);
-                    setProjectInclusionInput('');
-                  }
-                }}
-              />
-              <button onClick={() => {
-                addInclusion('project', projectInclusionInput);
-                setProjectInclusionInput('');
-              }}>+ Add</button>
-            </div>
-            {(settings.includedProjectPatterns || []).length > 0 && (
-              <div className="exclusion-items">
-                {(settings.includedProjectPatterns || []).map((item, i) => (
-                  <div key={i} className="exclusion-item">
-                    <span className="exclusion-item-text">{item}</span>
-                    <button className="exclusion-delete-btn" onClick={() => removeInclusion('project', i)}>
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <FilterListEditor
+            label="Included Projects (name pattern)"
+            placeholder="Partial name match..."
+            items={settings.includedProjectPatterns || []}
+            onAdd={(value) => addFilterItem('includedProjectPatterns', value)}
+            onRemove={(index) => removeFilterItem('includedProjectPatterns', index)}
+            style={{ marginTop: '12px' }}
+          />
         </div>
 
         {/* ── Exclusion Lists ── */}
         <div className={`settings-section ${!isApiKeySet ? 'settings-disabled' : ''}`}>
           <div className="settings-section-title">Exclusion Lists</div>
 
-          <div className="form-label">Excluded Tasks (GID or name pattern)</div>
-          <div className="exclusion-list">
-            <div className="exclusion-add-row">
-              <input
-                type="text"
-                placeholder="GID or partial name match..."
-                value={taskExclusionInput}
-                onChange={(e) => setTaskExclusionInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    addExclusion('task', taskExclusionInput);
-                    setTaskExclusionInput('');
-                  }
-                }}
-              />
-              <button onClick={() => {
-                addExclusion('task', taskExclusionInput);
-                setTaskExclusionInput('');
-              }}>+ Add</button>
-            </div>
-            {(settings.excludedTaskPatterns || []).length > 0 && (
-              <div className="exclusion-items">
-                {(settings.excludedTaskPatterns || []).map((item, i) => (
-                  <div key={i} className="exclusion-item">
-                    <span className="exclusion-item-text">{item}</span>
-                    <button className="exclusion-delete-btn" onClick={() => removeExclusion('task', i)}>
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <FilterListEditor
+            label="Excluded Tasks (GID or name pattern)"
+            placeholder="GID or partial name match..."
+            items={settings.excludedTaskPatterns || []}
+            onAdd={(value) => addFilterItem('excludedTaskPatterns', value)}
+            onRemove={(index) => removeFilterItem('excludedTaskPatterns', index)}
+          />
 
-          <div className="form-label" style={{ marginTop: '12px' }}>Excluded Projects (GID or name pattern)</div>
-          <div className="exclusion-list">
-            <div className="exclusion-add-row">
-              <input
-                type="text"
-                placeholder="GID or partial name match..."
-                value={projectExclusionInput}
-                onChange={(e) => setProjectExclusionInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    addExclusion('project', projectExclusionInput);
-                    setProjectExclusionInput('');
-                  }
-                }}
-              />
-              <button onClick={() => {
-                addExclusion('project', projectExclusionInput);
-                setProjectExclusionInput('');
-              }}>+ Add</button>
-            </div>
-            {(settings.excludedProjectPatterns || []).length > 0 && (
-              <div className="exclusion-items">
-                {(settings.excludedProjectPatterns || []).map((item, i) => (
-                  <div key={i} className="exclusion-item">
-                    <span className="exclusion-item-text">{item}</span>
-                    <button className="exclusion-delete-btn" onClick={() => removeExclusion('project', i)}>
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <FilterListEditor
+            label="Excluded Projects (GID or name pattern)"
+            placeholder="GID or partial name match..."
+            items={settings.excludedProjectPatterns || []}
+            onAdd={(value) => addFilterItem('excludedProjectPatterns', value)}
+            onRemove={(index) => removeFilterItem('excludedProjectPatterns', index)}
+            style={{ marginTop: '12px' }}
+          />
         </div>
       </div>
 
       {/* ── Footer ── */}
       <div className="settings-footer">
         <div className="settings-footer-info">
-          Panorasana v{version} by MipYip
+          Panoptisana v{version} by MipYip
         </div>
         <div className="settings-footer-actions">
-          <button onClick={() => window.settingsAPI.quit()}>Quit Panorasana</button>
+          <button onClick={() => window.settingsAPI.quit()}>Quit Panoptisana</button>
           <button onClick={() => window.settingsAPI.checkForUpdates()}>Check for Updates</button>
           <button className="btn-primary" onClick={() => window.settingsAPI.closeSettings()}>Close</button>
         </div>

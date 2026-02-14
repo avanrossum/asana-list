@@ -495,8 +495,16 @@
   gap: 6px;
 }
 
-.error-banner-dismiss {
+.error-banner-retry {
   margin-left: auto;
+  background: none;
+  color: var(--accent);
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.error-banner-dismiss {
   background: none;
   color: var(--error);
   padding: 2px 6px;

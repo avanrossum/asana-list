@@ -10,15 +10,19 @@ const { ipcMain, app, Menu } = require('electron');
  */
 function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow }) {
 
-  // ── Store: Settings ─────────────────────────────────────────
-
-  ipcMain.handle('store:get-settings', () => {
+  // Helper: return settings with apiKey masked
+  function getMaskedSettings() {
     const settings = store.getSettings();
-    // Never send the raw encrypted API key to renderer
     return {
       ...settings,
       apiKey: settings.apiKey ? '••••••••' : null
     };
+  }
+
+  // ── Store: Settings ─────────────────────────────────────────
+
+  ipcMain.handle('store:get-settings', () => {
+    return getMaskedSettings();
   });
 
   ipcMain.handle('store:set-settings', (_, updates) => {
@@ -35,7 +39,8 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
       asanaApi.restartPolling(updates.pollIntervalMinutes);
     }
 
-    return store.getSettings();
+    // Always return masked settings
+    return getMaskedSettings();
   });
 
   // ── Store: Comment Tracking ─────────────────────────────────
@@ -58,13 +63,15 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
 
     const trimmedKey = key.trim();
 
-    // Temporarily set the key for verification
+    // Verify the key before persisting it — use a temporary in-memory key
+    const originalApiKey = store.getSettings().apiKey;
     const encrypted = store.encryptApiKey(trimmedKey);
     store.setSettings({ apiKey: encrypted });
 
     const result = await asanaApi.verifyApiKey();
 
     if (result.valid) {
+      // Key verified — keep it persisted
       store.setSettings({ apiKeyVerified: true });
 
       // Fetch workspace users after verification
@@ -89,8 +96,8 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
 
       return { valid: true, user: result.user };
     } else {
-      // Key failed - remove it
-      store.setSettings({ apiKey: null, apiKeyVerified: false });
+      // Key failed — restore previous key (or clear if none existed)
+      store.setSettings({ apiKey: originalApiKey || null, apiKeyVerified: false });
       return { valid: false, error: result.error };
     }
   });
@@ -128,7 +135,7 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
   });
 
   ipcMain.handle('asana:refresh', async () => {
-    await asanaApi._poll();
+    await asanaApi.refresh();
   });
 
   // ── App ─────────────────────────────────────────────────────
@@ -144,10 +151,6 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
     if (mainWin && !mainWin.isDestroyed()) {
       mainWin.hide();
     }
-  });
-
-  ipcMain.on('window:open-settings', () => {
-    // Handled in main.js via openSettings()
   });
 
   ipcMain.on('settings:close', () => {
@@ -169,7 +172,7 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
           const list = [...(settings[excludeKey] || []), name];
           store.setSettings({ [excludeKey]: list });
           // Re-poll to apply the new exclusion immediately
-          asanaApi._poll();
+          asanaApi.refresh();
         }
       },
       { type: 'separator' },

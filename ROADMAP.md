@@ -1,4 +1,4 @@
-# Panorasana - Roadmap
+# Panoptisana - Roadmap
 
 ## Project Overview
 
@@ -42,6 +42,9 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [ ] "Open Asana links in..." selector — detect installed browsers and Asana desktop app, let user choose where links open
 - [ ] "Sort by last comment" sort option for task list
 - [ ] Post a comment to a task from within the app
+- [ ] OAuth authentication (PKCE flow with localhost callback) as alternative to PAT — "Connect to Asana" button for easier onboarding
+- [ ] SQLite storage engine (`better-sqlite3`) — replace JSON file store with SQLite for structured queries, task/comment caching, and offline history. Include auto-backup on launch and corruption detection with automatic recovery from latest backup
+- [ ] Comment change detection — track comment count + latest `created_at` timestamp per task instead of `modified_at`. More accurate new-comment highlighting without false positives from non-comment changes. Depends on SQLite migration for comment caching
 
 ## Feature Backlog
 
@@ -62,6 +65,18 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [ ] Custom fields display
 - [ ] Export task list
 - [ ] Window position memory per display
+
+### Code Quality / Hardening
+- [ ] Validate hotkey format before registering (reject invalid accelerator strings)
+- [ ] Add CSP headers to all BrowserWindows
+- [ ] Unit tests for `_applyFilters` logic in asana-api.js
+- [ ] Debounce hotkey input in Settings to avoid rapid re-registration
+- [ ] Move `ACCENT_COLORS` to a shared constants file
+- [ ] Add JSDoc to shared utilities (applyTheme, useThemeListener)
+- [ ] Accessibility: add aria labels and keyboard navigation to task/project lists
+- [ ] Structured logging (replace bare console.log/warn/error)
+- [ ] Error boundary components for each renderer
+- [ ] Performance: memoize filtered/sorted task and project lists (useMemo)
 
 ## Tech Stack
 

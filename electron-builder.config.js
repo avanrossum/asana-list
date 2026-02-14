@@ -1,6 +1,6 @@
 module.exports = {
-  appId: 'com.mipyip.panorasana',
-  productName: 'Panorasana',
+  appId: 'com.mipyip.panoptisana',
+  productName: 'Panoptisana',
   directories: {
     output: 'dist',
     buildResources: 'build'

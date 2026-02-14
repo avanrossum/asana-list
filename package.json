@@ -1,5 +1,5 @@
 {
-  "name": "panorasana",
+  "name": "panoptisana",
   "version": "0.2.0",
   "description": "Open-source Asana task and project visibility tool for macOS",
   "main": "src/main/main.js",

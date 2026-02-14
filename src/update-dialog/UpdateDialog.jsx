@@ -1,4 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { marked } from 'marked';
+import { useThemeListener } from '../shared/useThemeListener';
+
+// Configure marked for safe output (no raw HTML passthrough)
+marked.setOptions({ breaks: true, gfm: true });
+
+// Simple HTML sanitizer — allow only safe tags, strip event handlers
+function sanitizeHtml(html) {
+  const allowedTags = /^(p|br|strong|em|b|i|ul|ol|li|a|code|pre|h[1-6]|blockquote|hr|div|span)$/i;
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<\/?([a-z][a-z0-9]*)\b[^>]*>/gi, (match, tag) => {
+      if (allowedTags.test(tag)) {
+        return match.replace(/\s(on\w+|style|class)="[^"]*"/gi, '');
+      }
+      return '';
+    });
+}
 
 export default function UpdateDialog() {
   const [data, setData] = useState(null);
@@ -14,16 +32,22 @@ export default function UpdateDialog() {
       }
     }
     init();
-
-    const unsub = window.updateAPI.onThemeChanged((theme) => {
-      document.documentElement.dataset.theme = theme;
-    });
-    return () => unsub();
   }, []);
+
+  useThemeListener(window.updateAPI);
+
+  // Parse and sanitize release notes
+  const safeHtml = useMemo(() => {
+    if (!data?.releaseNotes) return '';
+    // If already HTML (starts with <), sanitize directly; otherwise parse as Markdown
+    const raw = data.releaseNotes.trim();
+    const html = raw.startsWith('<') ? raw : marked.parse(raw);
+    return sanitizeHtml(html);
+  }, [data?.releaseNotes]);
 
   if (!data) return null;
 
-  const { mode, currentVersion, newVersion, releaseNotes } = data;
+  const { mode, currentVersion, newVersion } = data;
 
   const titles = {
     'update-available': 'Update Available',
@@ -41,8 +65,8 @@ export default function UpdateDialog() {
           : `v${currentVersion} → v${newVersion}`}
       </div>
 
-      {releaseNotes && (
-        <div className="update-notes" dangerouslySetInnerHTML={{ __html: releaseNotes }} />
+      {safeHtml && (
+        <div className="update-notes" dangerouslySetInnerHTML={{ __html: safeHtml }} />
       )}
 
       <div className="update-actions">

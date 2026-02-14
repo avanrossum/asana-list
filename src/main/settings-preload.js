@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('settingsAPI', {
   getVersion: () => ipcRenderer.invoke('app:get-version'),
   checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),
   quit: () => ipcRenderer.send('app:quit'),
+  reRegisterHotkey: () => ipcRenderer.send('app:re-register-hotkey'),
 
   // ── Window ──────────────────────────────────────────────────
   closeSettings: () => ipcRenderer.send('settings:close'),

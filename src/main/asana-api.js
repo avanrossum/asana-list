@@ -5,6 +5,7 @@
 // ══════════════════════════════════════════════════════════════════════════════
 
 const BASE_URL = 'https://app.asana.com/api/1.0';
+const MAX_RETRIES = 3;
 
 class AsanaAPI {
   constructor({ store, getApiKey }) {
@@ -16,7 +17,7 @@ class AsanaAPI {
 
   // ── HTTP ────────────────────────────────────────────────────
 
-  async _fetch(endpoint, options = {}) {
+  async _fetch(endpoint, options = {}, retryCount = 0) {
     const apiKey = this._getApiKey();
     if (!apiKey) throw new Error('No API key configured');
 
@@ -28,6 +29,15 @@ class AsanaAPI {
     };
 
     const response = await fetch(url, { ...options, headers });
+
+    // Handle rate limiting with Retry-After
+    if (response.status === 429 && retryCount < MAX_RETRIES) {
+      const retryAfter = parseInt(response.headers.get('Retry-After') || '30', 10);
+      const waitMs = Math.min(retryAfter, 120) * 1000;
+      console.warn(`[asana-api] Rate limited, retrying in ${retryAfter}s (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+      await new Promise(resolve => setTimeout(resolve, waitMs));
+      return this._fetch(endpoint, options, retryCount + 1);
+    }
 
     if (!response.ok) {
       const body = await response.text().catch(() => '');
@@ -129,6 +139,11 @@ class AsanaAPI {
     if (this._onUpdate) {
       this.startPolling(intervalMinutes, this._onUpdate);
     }
+  }
+
+  /** Public entry point — use this instead of _poll() */
+  async refresh() {
+    return this._poll();
   }
 
   async _poll() {

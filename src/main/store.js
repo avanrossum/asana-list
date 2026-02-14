@@ -1,56 +1,90 @@
-const { app } = require('electron');
+const { app, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
 
 // ══════════════════════════════════════════════════════════════════════════════
 // DATA STORE
 // Persists settings and cached Asana data to disk.
-// API key is encrypted at rest using a machine-derived key.
+// API key is encrypted at rest using the OS keychain via safeStorage.
 // ══════════════════════════════════════════════════════════════════════════════
 
-const STORE_FILE = 'panorasana-data.json';
-const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
+const STORE_FILE = 'panoptisana-data.json';
 
 class Store {
   constructor() {
     this._filePath = path.join(app.getPath('userData'), STORE_FILE);
     this._data = this._load();
     this._saveTimer = null;
+
+    // Migrate legacy AES-256-GCM encrypted keys to safeStorage
+    this._migrateLegacyApiKey();
   }
 
-  // ── Encryption ──────────────────────────────────────────────
-
-  // Derive a machine-specific key from the app path and user data path
-  _getDerivedKey() {
-    const machineId = app.getPath('userData') + app.getPath('exe');
-    return crypto.createHash('sha256').update(machineId).digest();
-  }
+  // ── Encryption (safeStorage — OS Keychain) ────────────────
 
   encryptApiKey(plaintext) {
     if (!plaintext) return null;
-    const key = this._getDerivedKey();
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, key, iv);
-    let encrypted = cipher.update(plaintext, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    const authTag = cipher.getAuthTag().toString('hex');
-    return { iv: iv.toString('hex'), encrypted, authTag };
+    if (!safeStorage.isEncryptionAvailable()) {
+      console.error('[store] safeStorage encryption not available');
+      return null;
+    }
+    const encrypted = safeStorage.encryptString(plaintext);
+    return { safeStorage: true, data: encrypted.toString('base64') };
   }
 
   decryptApiKey(encryptedObj) {
-    if (!encryptedObj || !encryptedObj.iv || !encryptedObj.encrypted) return null;
+    if (!encryptedObj) return null;
     try {
-      const key = this._getDerivedKey();
+      // Handle safeStorage format
+      if (encryptedObj.safeStorage && encryptedObj.data) {
+        if (!safeStorage.isEncryptionAvailable()) {
+          console.error('[store] safeStorage decryption not available');
+          return null;
+        }
+        const buffer = Buffer.from(encryptedObj.data, 'base64');
+        return safeStorage.decryptString(buffer);
+      }
+      // Handle legacy AES-256-GCM format (for migration)
+      if (encryptedObj.iv && encryptedObj.encrypted) {
+        return this._decryptLegacy(encryptedObj);
+      }
+      return null;
+    } catch (err) {
+      console.error('[store] Failed to decrypt API key:', err.message);
+      return null;
+    }
+  }
+
+  // Legacy decryption for migration only
+  _decryptLegacy(encryptedObj) {
+    try {
+      const crypto = require('crypto');
+      const machineId = app.getPath('userData') + app.getPath('exe');
+      const key = crypto.createHash('sha256').update(machineId).digest();
       const iv = Buffer.from(encryptedObj.iv, 'hex');
-      const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, key, iv);
+      const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
       decipher.setAuthTag(Buffer.from(encryptedObj.authTag, 'hex'));
       let decrypted = decipher.update(encryptedObj.encrypted, 'hex', 'utf8');
       decrypted += decipher.final('utf8');
       return decrypted;
     } catch (err) {
-      console.error('[store] Failed to decrypt API key:', err.message);
+      console.error('[store] Legacy decryption failed:', err.message);
       return null;
+    }
+  }
+
+  // Migrate from legacy AES-256-GCM to safeStorage
+  _migrateLegacyApiKey() {
+    const settings = this.getSettings();
+    if (settings.apiKey && settings.apiKey.iv && settings.apiKey.encrypted && !settings.apiKey.safeStorage) {
+      const plaintext = this._decryptLegacy(settings.apiKey);
+      if (plaintext) {
+        const newEncrypted = this.encryptApiKey(plaintext);
+        if (newEncrypted) {
+          this.setSettings({ apiKey: newEncrypted });
+          console.log('[store] Migrated API key from AES-256-GCM to safeStorage');
+        }
+      }
     }
   }
 

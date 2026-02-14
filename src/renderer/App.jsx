@@ -3,6 +3,8 @@ import TaskList from './components/TaskList';
 import ProjectList from './components/ProjectList';
 import Icon from './components/Icon';
 import { ICON_PATHS } from './icons';
+import { applyTheme } from '../shared/applyTheme';
+import { useThemeListener } from '../shared/useThemeListener';
 import './styles/components.css';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -30,12 +32,7 @@ export default function App() {
       try {
         const settings = await window.electronAPI.getSettings();
 
-        // Apply theme
-        const theme = settings.theme === 'system'
-          ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-          : settings.theme;
-        document.documentElement.dataset.theme = theme || 'dark';
-        document.documentElement.dataset.accent = settings.accentColor || 'blue';
+        applyTheme(settings);
 
         setIsConnected(!!settings.apiKeyVerified);
 
@@ -82,24 +79,7 @@ export default function App() {
 
   // ── Theme Events ────────────────────────────────────────────
 
-  useEffect(() => {
-    const unsubTheme = window.electronAPI.onThemeChanged((theme) => {
-      document.documentElement.classList.add('theme-transitioning');
-      document.documentElement.dataset.theme = theme;
-      requestAnimationFrame(() => {
-        document.documentElement.classList.remove('theme-transitioning');
-      });
-    });
-
-    const unsubAccent = window.electronAPI.onAccentChanged((accent) => {
-      document.documentElement.dataset.accent = accent;
-    });
-
-    return () => {
-      unsubTheme();
-      unsubAccent();
-    };
-  }, []);
+  useThemeListener(window.electronAPI);
 
   // ── Keyboard Shortcut ───────────────────────────────────────
 
@@ -140,7 +120,7 @@ export default function App() {
     <div className="app-container">
       {/* Title Bar / Drag Region */}
       <div className="drag-region">
-        <span className="app-title">Panorasana</span>
+        <span className="app-title">Panoptisana</span>
         <div className="title-actions">
           <button className="icon-btn" onClick={handleRefresh} title="Refresh">
             <Icon path={ICON_PATHS.refresh} size={16} />
@@ -171,7 +151,8 @@ export default function App() {
       {error && (
         <div className="error-banner">
           <Icon path={ICON_PATHS.warning} size={14} />
-          <span>{error}</span>
+          <span>Connection issue — data may be stale.</span>
+          <button className="error-banner-retry" onClick={handleRefresh}>Retry</button>
           <button className="error-banner-dismiss" onClick={() => setError(null)}>Dismiss</button>
         </div>
       )}
