@@ -19,6 +19,9 @@ export default function App() {
   const [sortBy, setSortBy] = useState('modified');
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
+  const [unfilteredTaskCount, setUnfilteredTaskCount] = useState(null);
+  const [unfilteredProjectCount, setUnfilteredProjectCount] = useState(null);
   const [version, setVersion] = useState('');
   const [seenTimestamps, setSeenTimestamps] = useState({});
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -64,6 +67,7 @@ export default function App() {
 
   useEffect(() => {
     const unsubData = window.electronAPI.onDataUpdate((data) => {
+      setIsPolling(false);
       if (data.error) {
         setError(data.error);
         return;
@@ -71,10 +75,19 @@ export default function App() {
       setError(null);
       if (data.tasks) setTasks(data.tasks);
       if (data.projects) setProjects(data.projects);
+      if (data.unfilteredTaskCount != null) setUnfilteredTaskCount(data.unfilteredTaskCount);
+      if (data.unfilteredProjectCount != null) setUnfilteredProjectCount(data.unfilteredProjectCount);
       setIsConnected(true);
     });
 
-    return () => unsubData();
+    const unsubPollStarted = window.electronAPI.onPollStarted(() => {
+      setIsPolling(true);
+    });
+
+    return () => {
+      unsubData();
+      unsubPollStarted();
+    };
   }, []);
 
   // ── Theme Events ────────────────────────────────────────────
@@ -102,12 +115,15 @@ export default function App() {
   }, []);
 
   const handleRefresh = useCallback(async () => {
+    if (isPolling) return;
     try {
+      setIsPolling(true);
       await window.electronAPI.refreshData();
     } catch (err) {
+      setIsPolling(false);
       setError(err.message);
     }
-  }, []);
+  }, [isPolling]);
 
   const handleMarkSeen = useCallback(async (taskGid, modifiedAt) => {
     await window.electronAPI.setSeenTimestamp(taskGid, modifiedAt);
@@ -122,7 +138,12 @@ export default function App() {
       <div className="drag-region">
         <span className="app-title">Panoptisana</span>
         <div className="title-actions">
-          <button className="icon-btn" onClick={handleRefresh} title="Refresh">
+          <button
+            className={`icon-btn ${isPolling ? 'spinning' : ''}`}
+            onClick={handleRefresh}
+            disabled={isPolling}
+            title={isPolling ? 'Refreshing...' : 'Refresh'}
+          >
             <Icon path={ICON_PATHS.refresh} size={16} />
           </button>
           <button className="icon-btn" onClick={handleOpenSettings} title="Settings">
@@ -155,7 +176,9 @@ export default function App() {
         <div className="error-banner">
           <Icon path={ICON_PATHS.warning} size={14} />
           <span>Connection issue — data may be stale.</span>
-          <button className="error-banner-retry" onClick={handleRefresh}>Retry</button>
+          <button className="error-banner-retry" onClick={handleRefresh} disabled={isPolling}>
+            {isPolling ? 'Retrying...' : 'Retry'}
+          </button>
           <button className="error-banner-dismiss" onClick={() => setError(null)}>Dismiss</button>
         </div>
       )}
@@ -242,11 +265,16 @@ export default function App() {
       {/* Status Bar */}
       <div className="status-bar">
         <div className="status-bar-left">
-          <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`} />
+          <span className={`status-dot ${isPolling ? 'polling' : isConnected ? 'connected' : 'disconnected'}`} />
           <span>
-            {isConnected
-              ? `${activeTab === 'tasks' ? tasks.length : projects.length} ${activeTab}`
-              : 'Not connected'}
+            {!isConnected
+              ? 'Not connected'
+              : isPolling
+                ? 'Refreshing...'
+                : activeTab === 'tasks'
+                  ? `${tasks.length}${unfilteredTaskCount != null && unfilteredTaskCount !== tasks.length ? ` of ${unfilteredTaskCount}` : ''} tasks`
+                  : `${projects.length}${unfilteredProjectCount != null && unfilteredProjectCount !== projects.length ? ` of ${unfilteredProjectCount}` : ''} projects`
+            }
           </span>
         </div>
         <span>v{version}</span>

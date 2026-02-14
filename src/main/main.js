@@ -413,12 +413,9 @@ function openSettings() {
 
   settingsWindow.on('closed', () => {
     settingsWindow = null;
-    // Refresh main window data after settings change
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('asana:data-updated', {
-        tasks: store.getCachedTasks(),
-        projects: store.getCachedProjects()
-      });
+    // Trigger a fresh poll after settings change (re-applies filters server-side)
+    if (asanaApi) {
+      asanaApi.refresh();
     }
   });
 }
@@ -528,11 +525,19 @@ app.whenReady().then(() => {
   // Start polling if API key is verified
   const settings = store.getSettings();
   if (settings.apiKeyVerified && settings.apiKey) {
-    asanaApi.startPolling(settings.pollIntervalMinutes || TIMING.DEFAULT_POLL_INTERVAL_MINUTES, (data) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('asana:data-updated', data);
+    asanaApi.startPolling(
+      settings.pollIntervalMinutes || TIMING.DEFAULT_POLL_INTERVAL_MINUTES,
+      (data) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('asana:data-updated', data);
+        }
+      },
+      () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('asana:poll-started');
+        }
       }
-    });
+    );
   }
 
   // Check for updates (after brief delay)

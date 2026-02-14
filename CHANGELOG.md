@@ -5,6 +5,19 @@ All notable changes to Panoptisana will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] - 2026-02-14
+
+### Added
+- Status bar shows filtered vs total task/project count (e.g. "142 of 2052 tasks")
+- Polling indicator: pulsing amber status dot and "Refreshing..." text during data fetch
+- Spinning refresh button animation while polling is in progress
+- Refresh button and Retry button disabled during active poll to prevent duplicate requests
+- `asana:poll-started` IPC event for poll lifecycle tracking in renderer
+
+### Fixed
+- `restartPolling()` now preserves the `onPollStarted` callback (was dropped on poll interval change)
+- Settings window close now triggers a fresh poll instead of sending stale cached data
+
 ## [0.2.3] - 2026-02-14
 
 ### Fixed

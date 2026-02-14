@@ -181,8 +181,9 @@ class AsanaAPI {
 
   // ── Polling ─────────────────────────────────────────────────
 
-  startPolling(intervalMinutes, onUpdate) {
+  startPolling(intervalMinutes, onUpdate, onPollStarted) {
     this._onUpdate = onUpdate;
+    this._onPollStarted = onPollStarted || null;
     this.stopPolling();
 
     // Fetch immediately
@@ -202,7 +203,7 @@ class AsanaAPI {
 
   restartPolling(intervalMinutes) {
     if (this._onUpdate) {
-      this.startPolling(intervalMinutes, this._onUpdate);
+      this.startPolling(intervalMinutes, this._onUpdate, this._onPollStarted);
     }
   }
 
@@ -215,6 +216,11 @@ class AsanaAPI {
     try {
       const settings = this._store.getSettings();
       if (!settings.apiKeyVerified) return;
+
+      // Notify that polling has started
+      if (this._onPollStarted) {
+        this._onPollStarted();
+      }
 
       // Get workspace (use first available)
       const workspaces = await this.getWorkspaces();
@@ -230,8 +236,10 @@ class AsanaAPI {
 
       // Determine which users to fetch tasks for
       let tasks = [];
+      let unfilteredTaskCount = 0;
       if (settings.showOnlyMyTasks && settings.currentUserId) {
         tasks = await this.getTasks(workspaceGid, settings.currentUserId);
+        unfilteredTaskCount = tasks.length;
         // Asana search returns collaborator tasks too — filter to direct assignments only
         tasks = tasks.filter(t => t.assignee && t.assignee.gid === settings.currentUserId);
       } else if (settings.selectedUserIds && settings.selectedUserIds.length > 0) {
@@ -243,6 +251,7 @@ class AsanaAPI {
         const selectedSet = new Set(settings.selectedUserIds);
         const seen = new Set();
         for (const set of taskSets) {
+          unfilteredTaskCount += set.length;
           for (const task of set) {
             if (!seen.has(task.gid) && task.assignee && selectedSet.has(task.assignee.gid)) {
               seen.add(task.gid);
@@ -253,22 +262,24 @@ class AsanaAPI {
       } else {
         // No user filter - get all incomplete tasks in workspace
         tasks = await this.getTasks(workspaceGid, null);
+        unfilteredTaskCount = tasks.length;
       }
 
-      // Apply exclusion filters
+      // Apply exclusion/inclusion filters
       tasks = this._applyFilters(tasks, 'task', settings);
 
       // Fetch projects
       let projects = await this.getProjects(workspaceGid);
+      const unfilteredProjectCount = projects.length;
       projects = this._applyFilters(projects, 'project', settings);
 
       // Cache results
       this._store.setCachedTasks(tasks);
       this._store.setCachedProjects(projects);
 
-      // Notify renderer
+      // Notify renderer (include unfiltered counts for status bar)
       if (this._onUpdate) {
-        this._onUpdate({ tasks, projects });
+        this._onUpdate({ tasks, projects, unfilteredTaskCount, unfilteredProjectCount });
       }
     } catch (err) {
       console.error('[asana-api] Poll failed:', err.message);

@@ -4,7 +4,7 @@
 
 Open-source Asana task and project visibility tool for macOS. Displays a searchable list of incomplete tasks and active projects with comment tracking and auto-updates.
 
-## Current Version: 0.2.3
+## Current Version: 0.2.4
 
 ### Core Features (v0.1.0)
 - [x] Searchable task list with sorting
@@ -54,6 +54,13 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 ### v0.2.3 Additions
 - [x] Fix: Task list capped at 100 (search endpoint pagination with manual `created_at`-based fallback)
 - [x] Settings: Configurable task fetch page limit
+
+### v0.2.4 Additions
+- [x] Status bar: filtered vs total count (e.g. "142 of 2052 tasks")
+- [x] Polling indicator with pulsing amber dot and "Refreshing..." text
+- [x] Spinning refresh button + disabled state during active poll
+- [x] Fix: `restartPolling()` preserves `onPollStarted` callback
+- [x] Fix: Settings close triggers fresh poll (not stale cached data)
 
 ## Immediate Features
 

@@ -87,12 +87,21 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
 
       // Start polling
       const settings = store.getSettings();
-      asanaApi.startPolling(settings.pollIntervalMinutes || 5, (data) => {
-        const mainWin = getMainWindow();
-        if (mainWin && !mainWin.isDestroyed()) {
-          mainWin.webContents.send('asana:data-updated', data);
+      asanaApi.startPolling(
+        settings.pollIntervalMinutes || 5,
+        (data) => {
+          const mainWin = getMainWindow();
+          if (mainWin && !mainWin.isDestroyed()) {
+            mainWin.webContents.send('asana:data-updated', data);
+          }
+        },
+        () => {
+          const mainWin = getMainWindow();
+          if (mainWin && !mainWin.isDestroyed()) {
+            mainWin.webContents.send('asana:poll-started');
+          }
         }
-      });
+      );
 
       return { valid: true, user: result.user };
     } else {

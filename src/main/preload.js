@@ -42,6 +42,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('asana:data-updated', handler);
     return () => ipcRenderer.removeListener('asana:data-updated', handler);
   },
+  onPollStarted: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('asana:poll-started', handler);
+    return () => ipcRenderer.removeListener('asana:poll-started', handler);
+  },
   onThemeChanged: (callback) => {
     const handler = (_, theme) => callback(theme);
     ipcRenderer.on('theme:changed', handler);
