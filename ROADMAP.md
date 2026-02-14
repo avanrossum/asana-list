@@ -37,6 +37,12 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 
 - [ ] "Projects" dropdown above task list — filter tasks to a single project (obeys exclusion/inclusion lists, "show only my tasks", and "show tasks for" user lists)
 
+## Next Up (Post v1)
+
+- [ ] "Open Asana links in..." selector — detect installed browsers and Asana desktop app, let user choose where links open
+- [ ] "Sort by last comment" sort option for task list
+- [ ] Post a comment to a task from within the app
+
 ## Feature Backlog
 
 ### High Priority
@@ -48,7 +54,6 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 ### Medium Priority
 - [ ] Custom sort persistence
 - [ ] Task grouping (by project, by assignee, by section)
-- [ ] Quick-add comment from within app
 - [ ] Project status display
 - [ ] Search history
 
