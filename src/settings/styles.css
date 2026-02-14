@@ -15,6 +15,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0 12px;
+  position: relative;
   background: var(--bg-primary);
 }
 
@@ -22,6 +24,28 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
+}
+
+.settings-close-btn {
+  -webkit-app-region: no-drag;
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  padding: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.settings-close-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .settings-content {

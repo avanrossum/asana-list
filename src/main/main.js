@@ -69,11 +69,11 @@ function showUpdateDialog(mode, options) {
   updateDialogWindow = new BrowserWindow({
     width: UPDATE_DIALOG_SIZE.WIDTH,
     height: UPDATE_DIALOG_SIZE.HEIGHT,
+    alwaysOnTop: true,
     resizable: false,
     minimizable: false,
     maximizable: false,
-    frame: true,
-    titleBarStyle: 'hiddenInset',
+    frame: false,
     backgroundColor: THEME_BG_COLORS[theme],
     webPreferences: {
       preload: path.join(__dirname, 'update-dialog-preload.js'),
@@ -317,9 +317,8 @@ function createMainWindow() {
     minWidth: WINDOW_SIZE.MIN_WIDTH,
     minHeight: WINDOW_SIZE.MIN_HEIGHT,
     maxWidth: WINDOW_SIZE.MAX_WIDTH,
-    frame: true,
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 12, y: 12 },
+    alwaysOnTop: true,
+    frame: false,
     backgroundColor: THEME_BG_COLORS[theme],
     show: false,
     webPreferences: {
@@ -387,12 +386,11 @@ function openSettings() {
   settingsWindow = new BrowserWindow({
     width: SETTINGS_WINDOW_SIZE.WIDTH,
     height: SETTINGS_WINDOW_SIZE.HEIGHT,
+    alwaysOnTop: true,
     resizable: false,
     minimizable: false,
     maximizable: false,
-    frame: true,
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 12, y: 12 },
+    frame: false,
     backgroundColor: THEME_BG_COLORS[theme],
     show: false,
     webPreferences: {

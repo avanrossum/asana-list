@@ -128,6 +128,9 @@ export default function App() {
           <button className="icon-btn" onClick={handleOpenSettings} title="Settings">
             <Icon path={ICON_PATHS.settings} size={16} />
           </button>
+          <button className="icon-btn" onClick={() => window.electronAPI.hideWindow()} title="Minimize to tray">
+            <Icon path={ICON_PATHS.minimize} size={16} />
+          </button>
         </div>
       </div>
 
