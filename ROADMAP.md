@@ -4,7 +4,7 @@
 
 Open-source Asana task and project visibility tool for macOS. Displays a searchable list of incomplete tasks and active projects with comment tracking and auto-updates.
 
-## Current Version: 0.2.0
+## Current Version: 0.2.1
 
 ### Core Features (v0.1.0)
 - [x] Searchable task list with sorting
@@ -27,6 +27,23 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [x] Fix: "Show only my tasks" now filters to direct assignments only
 - [x] Fix: `currentUserId` settings read correctly
 
+### v0.2.1 Additions
+- [x] Renamed from Panorasana to Panoptisana
+- [x] SQLite storage engine (`better-sqlite3`) replacing JSON file store
+- [x] Auto-backup on launch + corruption detection/recovery (`PRAGMA quick_check`)
+- [x] `sandbox: true` on all BrowserWindows
+- [x] API key verify-first with rollback on failure
+- [x] IPC settings masking (API key never reaches renderer)
+- [x] XSS protection for release notes (`marked` + `DOMPurify`)
+- [x] Asana API rate-limit retry (HTTP 429, up to 3 retries)
+- [x] Error banner with Retry button
+- [x] Global hotkey re-registration via IPC
+- [x] Shared `applyTheme` / `useThemeListener` utilities
+- [x] Shared `base.css` across all 3 renderers
+- [x] Reusable `FilterListEditor` component
+- [x] Tray null/destroyed window guards
+- [x] Removed legacy AES-256-GCM encryption
+
 ## Immediate Fixes
 
 - [ ] Always on top (all windows)
@@ -43,7 +60,7 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [ ] "Sort by last comment" sort option for task list
 - [ ] Post a comment to a task from within the app
 - [ ] OAuth authentication (PKCE flow with localhost callback) as alternative to PAT — "Connect to Asana" button for easier onboarding
-- [ ] SQLite storage engine (`better-sqlite3`) — replace JSON file store with SQLite for structured queries, task/comment caching, and offline history. Include auto-backup on launch and corruption detection with automatic recovery from latest backup
+- [x] SQLite storage engine (`better-sqlite3`) — replace JSON file store with SQLite for structured queries, task/comment caching, and offline history. Include auto-backup on launch and corruption detection with automatic recovery from latest backup
 - [ ] Comment change detection — track comment count + latest `created_at` timestamp per task instead of `modified_at`. More accurate new-comment highlighting without false positives from non-comment changes. Depends on SQLite migration for comment caching
 
 ## Feature Backlog
@@ -87,6 +104,7 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 | Build | Vite 7 |
 | Packaging | electron-builder |
 | Auto-update | electron-updater |
+| Storage | SQLite (better-sqlite3) |
 | Language | JavaScript (ES Modules in renderer, CJS in main) |
 
 ## Gotchas

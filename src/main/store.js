@@ -1,26 +1,137 @@
 const { app, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const Database = require('better-sqlite3');
 
 // ══════════════════════════════════════════════════════════════════════════════
 // DATA STORE
-// Persists settings and cached Asana data to disk.
+// Persists settings and cached Asana data to disk via SQLite.
 // API key is encrypted at rest using the OS keychain via safeStorage.
 // ══════════════════════════════════════════════════════════════════════════════
 
-const STORE_FILE = 'panoptisana-data.json';
+const DB_FILE = 'panoptisana.db';
+const BACKUP_FILE = 'panoptisana.db.bak';
+const SCHEMA_VERSION = '1';
 
 class Store {
   constructor() {
-    this._filePath = path.join(app.getPath('userData'), STORE_FILE);
-    this._data = this._load();
-    this._saveTimer = null;
+    const userDataDir = app.getPath('userData');
+    this._dbPath = path.join(userDataDir, DB_FILE);
+    this._backupPath = path.join(userDataDir, BACKUP_FILE);
 
-    // Migrate legacy AES-256-GCM encrypted keys to safeStorage
-    this._migrateLegacyApiKey();
+    // Back up existing database before opening
+    this._backup();
+
+    // Open database, check integrity, initialize schema
+    this._db = this._openDatabase();
+    this._initSchema();
+    this._prepareStatements();
   }
 
-  // ── Encryption (safeStorage — OS Keychain) ────────────────
+  // ── Database Lifecycle ────────────────────────────────────────
+
+  _backup() {
+    try {
+      if (fs.existsSync(this._dbPath)) {
+        fs.copyFileSync(this._dbPath, this._backupPath);
+      }
+    } catch (err) {
+      console.error('[store] Failed to create backup:', err.message);
+    }
+  }
+
+  _openDatabase() {
+    let db;
+    try {
+      db = new Database(this._dbPath);
+      // Check integrity
+      const result = db.pragma('quick_check', { simple: true });
+      if (result !== 'ok') {
+        throw new Error(`Integrity check failed: ${result}`);
+      }
+    } catch (err) {
+      console.error('[store] Database issue:', err.message);
+      // Close if open
+      if (db) {
+        try { db.close(); } catch (_) { /* ignore */ }
+      }
+      // Attempt restore from backup
+      if (fs.existsSync(this._backupPath)) {
+        console.log('[store] Restoring from backup...');
+        try {
+          fs.copyFileSync(this._backupPath, this._dbPath);
+          db = new Database(this._dbPath);
+        } catch (restoreErr) {
+          console.error('[store] Backup restore failed:', restoreErr.message);
+          // Last resort: start fresh
+          try { fs.unlinkSync(this._dbPath); } catch (_) { /* ignore */ }
+          db = new Database(this._dbPath);
+        }
+      } else {
+        // No backup — start fresh
+        try { fs.unlinkSync(this._dbPath); } catch (_) { /* ignore */ }
+        db = new Database(this._dbPath);
+      }
+    }
+
+    // Enable WAL mode for better concurrent read performance
+    db.pragma('journal_mode = WAL');
+    db.pragma('foreign_keys = ON');
+
+    return db;
+  }
+
+  _initSchema() {
+    this._db.exec(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key   TEXT PRIMARY KEY,
+        value TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS cache (
+        key        TEXT PRIMARY KEY,
+        data       TEXT NOT NULL,
+        fetched_at INTEGER
+      );
+
+      CREATE TABLE IF NOT EXISTS seen_timestamps (
+        task_gid  TEXT PRIMARY KEY,
+        timestamp TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS meta (
+        key   TEXT PRIMARY KEY,
+        value TEXT
+      );
+    `);
+
+    // Set schema version (only on first creation)
+    const existing = this._db.prepare('SELECT value FROM meta WHERE key = ?').get('schema_version');
+    if (!existing) {
+      this._db.prepare('INSERT INTO meta (key, value) VALUES (?, ?)').run('schema_version', SCHEMA_VERSION);
+    }
+  }
+
+  _prepareStatements() {
+    this._stmts = {
+      getAllSettings:  this._db.prepare('SELECT key, value FROM settings'),
+      getSetting:     this._db.prepare('SELECT value FROM settings WHERE key = ?'),
+      setSetting:     this._db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)'),
+      getCache:       this._db.prepare('SELECT data FROM cache WHERE key = ?'),
+      setCache:       this._db.prepare('INSERT OR REPLACE INTO cache (key, data, fetched_at) VALUES (?, ?, ?)'),
+      getAllSeen:     this._db.prepare('SELECT task_gid, timestamp FROM seen_timestamps'),
+      setSeen:        this._db.prepare('INSERT OR REPLACE INTO seen_timestamps (task_gid, timestamp) VALUES (?, ?)')
+    };
+
+    // Transaction for batch settings updates
+    this._setManySettings = this._db.transaction((entries) => {
+      for (const [key, value] of entries) {
+        this._stmts.setSetting.run(key, JSON.stringify(value));
+      }
+    });
+  }
+
+  // ── Encryption (safeStorage — OS Keychain) ────────────────────
 
   encryptApiKey(plaintext) {
     if (!plaintext) return null;
@@ -35,7 +146,6 @@ class Store {
   decryptApiKey(encryptedObj) {
     if (!encryptedObj) return null;
     try {
-      // Handle safeStorage format
       if (encryptedObj.safeStorage && encryptedObj.data) {
         if (!safeStorage.isEncryptionAvailable()) {
           console.error('[store] safeStorage decryption not available');
@@ -44,10 +154,6 @@ class Store {
         const buffer = Buffer.from(encryptedObj.data, 'base64');
         return safeStorage.decryptString(buffer);
       }
-      // Handle legacy AES-256-GCM format (for migration)
-      if (encryptedObj.iv && encryptedObj.encrypted) {
-        return this._decryptLegacy(encryptedObj);
-      }
       return null;
     } catch (err) {
       console.error('[store] Failed to decrypt API key:', err.message);
@@ -55,134 +161,96 @@ class Store {
     }
   }
 
-  // Legacy decryption for migration only
-  _decryptLegacy(encryptedObj) {
-    try {
-      const crypto = require('crypto');
-      const machineId = app.getPath('userData') + app.getPath('exe');
-      const key = crypto.createHash('sha256').update(machineId).digest();
-      const iv = Buffer.from(encryptedObj.iv, 'hex');
-      const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-      decipher.setAuthTag(Buffer.from(encryptedObj.authTag, 'hex'));
-      let decrypted = decipher.update(encryptedObj.encrypted, 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
-      return decrypted;
-    } catch (err) {
-      console.error('[store] Legacy decryption failed:', err.message);
-      return null;
-    }
-  }
-
-  // Migrate from legacy AES-256-GCM to safeStorage
-  _migrateLegacyApiKey() {
-    const settings = this.getSettings();
-    if (settings.apiKey && settings.apiKey.iv && settings.apiKey.encrypted && !settings.apiKey.safeStorage) {
-      const plaintext = this._decryptLegacy(settings.apiKey);
-      if (plaintext) {
-        const newEncrypted = this.encryptApiKey(plaintext);
-        if (newEncrypted) {
-          this.setSettings({ apiKey: newEncrypted });
-          console.log('[store] Migrated API key from AES-256-GCM to safeStorage');
-        }
-      }
-    }
-  }
-
-  // ── Data Access ─────────────────────────────────────────────
-
-  getData() {
-    return this._data;
-  }
+  // ── Settings ──────────────────────────────────────────────────
 
   getSettings() {
-    return this._data.settings || {};
+    const rows = this._stmts.getAllSettings.all();
+    const settings = {};
+    for (const row of rows) {
+      try {
+        settings[row.key] = JSON.parse(row.value);
+      } catch (_) {
+        settings[row.key] = row.value;
+      }
+    }
+    return settings;
   }
 
   setSettings(updates) {
-    this._data.settings = { ...this._data.settings, ...updates };
-    this._scheduleSave();
+    if (!updates || typeof updates !== 'object') return;
+    this._setManySettings(Object.entries(updates));
   }
 
+  // ── Cached Data ───────────────────────────────────────────────
+
   getCachedTasks() {
-    return this._data.cachedTasks || [];
+    const row = this._stmts.getCache.get('tasks');
+    if (!row) return [];
+    try {
+      return JSON.parse(row.data);
+    } catch (_) {
+      return [];
+    }
   }
 
   setCachedTasks(tasks) {
-    this._data.cachedTasks = tasks;
-    this._data.lastTaskFetch = Date.now();
-    this._scheduleSave();
+    this._stmts.setCache.run('tasks', JSON.stringify(tasks), Date.now());
   }
 
   getCachedProjects() {
-    return this._data.cachedProjects || [];
+    const row = this._stmts.getCache.get('projects');
+    if (!row) return [];
+    try {
+      return JSON.parse(row.data);
+    } catch (_) {
+      return [];
+    }
   }
 
   setCachedProjects(projects) {
-    this._data.cachedProjects = projects;
-    this._data.lastProjectFetch = Date.now();
-    this._scheduleSave();
+    this._stmts.setCache.run('projects', JSON.stringify(projects), Date.now());
   }
 
   getCachedUsers() {
-    return this._data.cachedUsers || [];
+    const row = this._stmts.getCache.get('users');
+    if (!row) return [];
+    try {
+      return JSON.parse(row.data);
+    } catch (_) {
+      return [];
+    }
   }
 
   setCachedUsers(users) {
-    this._data.cachedUsers = users;
-    this._scheduleSave();
+    this._stmts.setCache.run('users', JSON.stringify(users), null);
   }
 
-  // Track last-seen modified_at timestamp per task (for comment highlighting)
+  // ── Comment Tracking ──────────────────────────────────────────
+
   getSeenTimestamps() {
-    return this._data.seenTimestamps || {};
+    const rows = this._stmts.getAllSeen.all();
+    const timestamps = {};
+    for (const row of rows) {
+      timestamps[row.task_gid] = row.timestamp;
+    }
+    return timestamps;
   }
 
   setSeenTimestamp(taskGid, timestamp) {
-    if (!this._data.seenTimestamps) {
-      this._data.seenTimestamps = {};
-    }
-    this._data.seenTimestamps[taskGid] = timestamp;
-    this._scheduleSave();
+    if (!taskGid || !timestamp) return;
+    this._stmts.setSeen.run(taskGid, timestamp);
   }
 
-  // ── Persistence ─────────────────────────────────────────────
+  // ── Lifecycle ─────────────────────────────────────────────────
 
-  _load() {
-    try {
-      if (fs.existsSync(this._filePath)) {
-        const raw = fs.readFileSync(this._filePath, 'utf8');
-        return JSON.parse(raw);
-      }
-    } catch (err) {
-      console.error('[store] Failed to load data:', err.message);
-    }
-    return { settings: {}, cachedTasks: [], cachedProjects: [], cachedUsers: [], seenTimestamps: {} };
-  }
-
-  _save() {
-    try {
-      const dir = path.dirname(this._filePath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(this._filePath, JSON.stringify(this._data, null, 2), 'utf8');
-    } catch (err) {
-      console.error('[store] Failed to save data:', err.message);
-    }
-  }
-
-  _scheduleSave() {
-    if (this._saveTimer) clearTimeout(this._saveTimer);
-    this._saveTimer = setTimeout(() => this._save(), 500);
-  }
-
-  // Force immediate save (for app quit)
   flush() {
-    if (this._saveTimer) {
-      clearTimeout(this._saveTimer);
-      this._saveTimer = null;
+    if (this._db && this._db.open) {
+      try {
+        this._db.pragma('wal_checkpoint(TRUNCATE)');
+      } catch (err) {
+        console.error('[store] WAL checkpoint failed:', err.message);
+      }
     }
-    this._save();
   }
 }
 

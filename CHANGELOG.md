@@ -5,6 +5,33 @@ All notable changes to Panoptisana will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-02-14
+
+### Changed
+- Renamed app from Panorasana to Panoptisana
+- Replaced JSON file store with SQLite (`better-sqlite3`) for improved reliability and corruption resistance
+  - Settings stored as key-value rows, cached Asana data as JSON blobs, comment timestamps as individual rows
+  - WAL mode enabled for concurrent read performance
+  - Auto-backup on launch with `PRAGMA quick_check` corruption detection and automatic recovery
+
+### Removed
+- Legacy AES-256-GCM API key encryption (fully migrated to `safeStorage` in v0.2.0)
+
+### Security
+- All BrowserWindows now use `sandbox: true`
+- API key verification uses verify-first pattern with rollback on failure
+- IPC never returns raw API key to renderer (masked as `'••••••••'`)
+- XSS protection via `marked` + `DOMPurify` for release notes rendering
+
+### Improved
+- Extracted shared `applyTheme` utility and `useThemeListener` hook across all 3 renderers
+- Extracted shared `base.css` (reset, body, scrollbar, buttons) imported by all 3 renderers
+- Extracted reusable `FilterListEditor` component replacing 4 duplicated filter list blocks
+- Asana API rate-limit retry: HTTP 429 → Retry-After header, up to 3 retries
+- Error banner with Retry button for connection issues
+- Global hotkey re-registration via IPC (no restart needed)
+- Tray click handler guards against null/destroyed windows
+
 ## [0.2.0] - 2026-02-13
 
 ### Added

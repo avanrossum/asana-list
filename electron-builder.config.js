@@ -11,6 +11,9 @@ module.exports = {
     'build/trayIconTemplate.png',
     'build/trayIconTemplate@2x.png'
   ],
+  asarUnpack: [
+    'node_modules/better-sqlite3/**/*'
+  ],
   mac: {
     category: 'public.app-category.productivity',
     target: ['dmg', 'zip'],  // zip needed for auto-update
