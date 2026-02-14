@@ -75,6 +75,11 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [x] Clear search button (X icon) in search bar
 - [x] Status bar count decrements immediately on task completion
 
+## Next Immediate
+
+- [ ] Create `code_review.md` — document code review standards and process
+- [ ] Full code review against `code_review.md` standards — identify issues, improvements, and action items
+
 ## Pre-v1: Code Quality / Architecture
 
 ### Refactoring
