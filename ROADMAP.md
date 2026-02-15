@@ -77,8 +77,10 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 
 ## Next Immediate
 
+- [ ] Fix: "Only my projects" checkbox missing from the Projects tab — regression, needs immediate resolution
 - [ ] Create `code_review.md` — document code review standards and process
 - [ ] Full code review against `code_review.md` standards — identify issues, improvements, and action items
+- [ ] First-pull loading state — show "Loading..." or similar on the main screen after entering an API key for the first time, so the empty list doesn't look broken while the initial poll runs
 
 ## Pre-v1: Code Quality / Architecture
 
@@ -117,6 +119,7 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 ## Feature Backlog
 
 ### High Priority
+- [ ] Inbox slide-out drawer — Asana inbox notifications panel that slides in from the window edge via CSS `transform: translateX()`. Main process detects window position relative to screen bounds (`screen.getDisplayMatching`) to determine slide direction (left or right edge). Fixed-position overlay, no separate window
 - [ ] Task count badges in tray menu
 - [ ] Notification for new comments
 - [ ] Keyboard navigation in task list
