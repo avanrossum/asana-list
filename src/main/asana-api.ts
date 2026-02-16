@@ -5,7 +5,7 @@
 // ══════════════════════════════════════════════════════════════════════════════
 
 import type {
-  AsanaTask, AsanaProject, AsanaUser, AsanaComment,
+  AsanaTask, AsanaProject, AsanaUser, AsanaComment, AsanaSection, AsanaField,
   AsanaWorkspace, VerifyApiKeyResult,
   PollCallback, PollStartedCallback
 } from '../shared/types';
@@ -204,6 +204,20 @@ export class AsanaAPI {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: { completed: true } })
     });
+  }
+
+  async getProjectSections(projectGid: string): Promise<AsanaSection[]> {
+    return this._fetchAll<AsanaSection>(`/projects/${projectGid}/sections?opt_fields=name`);
+  }
+
+  async getProjectFields(projectGid: string): Promise<AsanaField[]> {
+    const fields = 'custom_fields.name,custom_fields.type';
+    const result = await this._fetch<{ custom_fields?: { gid: string; name: string; type: string }[] }[]>(
+      `/tasks?project=${projectGid}&opt_fields=${fields}&limit=1`
+    );
+    const task = Array.isArray(result.data) ? result.data[0] : null;
+    if (!task || !task.custom_fields) return [];
+    return task.custom_fields.map(cf => ({ gid: cf.gid, name: cf.name, type: cf.type }));
   }
 
   async getTaskComments(taskGid: string): Promise<AsanaComment[]> {

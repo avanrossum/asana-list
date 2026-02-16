@@ -6,7 +6,7 @@
 
 import type { Store } from './store';
 import type {
-  AsanaUser, AsanaComment, AsanaWorkspace, VerifyApiKeyResult,
+  AsanaUser, AsanaComment, AsanaSection, AsanaField, AsanaWorkspace, VerifyApiKeyResult,
   PollCallback, PollStartedCallback, AsanaAPILike
 } from '../shared/types';
 import { DEMO_WORKSPACE, DEMO_CURRENT_USER, getDemoUsers, getDemoProjects, getDemoTasks } from './demo-data';
@@ -58,6 +58,24 @@ export class DemoAsanaAPI implements AsanaAPILike {
         created_by: { gid: DEMO_CURRENT_USER.gid, name: DEMO_CURRENT_USER.name },
         type: 'comment',
       },
+    ];
+  }
+
+  async getProjectSections(_projectGid: string): Promise<AsanaSection[]> {
+    return [
+      { gid: '8000000000000001', name: 'Backlog' },
+      { gid: '8000000000000002', name: 'In Progress' },
+      { gid: '8000000000000003', name: 'In Review' },
+      { gid: '8000000000000004', name: 'Done' },
+    ];
+  }
+
+  async getProjectFields(_projectGid: string): Promise<AsanaField[]> {
+    return [
+      { gid: '7000000000000001', name: 'Priority', type: 'enum' },
+      { gid: '7000000000000002', name: 'Story Points', type: 'number' },
+      { gid: '7000000000000003', name: 'Sprint', type: 'enum' },
+      { gid: '7000000000000004', name: 'Due Date Override', type: 'date' },
     ];
   }
 

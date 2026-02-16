@@ -4,7 +4,7 @@
 
 Open-source Asana task and project visibility tool for macOS. Displays a searchable list of incomplete tasks and active projects with comment tracking and auto-updates.
 
-## Current Version: 0.5.4
+## Current Version: 0.5.5
 
 ### Core Features (v0.1.0)
 - [x] Searchable task list with sorting
@@ -104,8 +104,13 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 ### v0.5.4 Additions
 - [x] Fix: Settings and update dialog windows now open centered over the main window instead of defaulting to the primary display
 
+### v0.5.5 Additions
+- [x] Project section GID surfacing — toggle to show section names and copy-GID buttons on each project (mirrors the comment toggle pattern on tasks)
+- [x] Project field GID surfacing — tabbed "Sections & Fields" panel on each project, with copy-GID buttons and CSV export for both sections and fields
+
 ## Next Immediate
 
+- [ ] Fix: CSV export save dialog appears behind the main window — needs `alwaysOnTop` or parent window handling so the native save dialog is visible
 - [ ] Fix: "Only my projects" checkbox missing from the Projects tab — regression, needs immediate resolution
 - [ ] Create `code_review.md` — document code review standards and process
 - [ ] Full code review against `code_review.md` standards — identify issues, improvements, and action items

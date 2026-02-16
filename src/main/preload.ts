@@ -12,8 +12,13 @@ const electronAPI: ElectronAPI = {
   getProjects: () => ipcRenderer.invoke('asana:get-projects'),
   getUsers: () => ipcRenderer.invoke('asana:get-users'),
   getTaskComments: (taskGid) => ipcRenderer.invoke('asana:get-task-comments', taskGid),
+  getProjectSections: (projectGid) => ipcRenderer.invoke('asana:get-project-sections', projectGid),
+  getProjectFields: (projectGid) => ipcRenderer.invoke('asana:get-project-fields', projectGid),
   completeTask: (taskGid) => ipcRenderer.invoke('asana:complete-task', taskGid),
   refreshData: () => ipcRenderer.invoke('asana:refresh'),
+
+  // ── Export ────────────────────────────────────────────────────
+  exportCsv: (filename, csv) => ipcRenderer.invoke('app:export-csv', filename, csv),
 
   // ── API Key ─────────────────────────────────────────────────
   verifyApiKey: (key) => ipcRenderer.invoke('asana:verify-api-key', key),

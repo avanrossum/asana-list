@@ -57,6 +57,17 @@ export interface AsanaComment {
   type: 'comment';
 }
 
+export interface AsanaSection {
+  gid: string;
+  name: string;
+}
+
+export interface AsanaField {
+  gid: string;
+  name: string;
+  type: string;
+}
+
 export interface AsanaWorkspace {
   gid: string;
   name?: string;
@@ -119,6 +130,8 @@ export interface AsanaAPILike {
   getWorkspaces(): Promise<AsanaWorkspace[]>;
   getUsers(workspaceGid: string): Promise<AsanaUser[]>;
   getTaskComments(taskGid: string): Promise<AsanaComment[]>;
+  getProjectSections(projectGid: string): Promise<AsanaSection[]>;
+  getProjectFields(projectGid: string): Promise<AsanaField[]>;
   completeTask(taskGid: string): Promise<{ data: unknown }>;
   startPolling(interval: number, onUpdate: PollCallback, onPollStarted?: PollStartedCallback): void;
   stopPolling(): void;
@@ -185,6 +198,8 @@ export interface IpcInvokeChannelMap {
   'asana:get-projects':       { args: [];                                    return: AsanaProject[] };
   'asana:get-users':          { args: [];                                    return: AsanaUser[] };
   'asana:get-task-comments':  { args: [taskGid: string];                     return: AsanaComment[] };
+  'asana:get-project-sections': { args: [projectGid: string];               return: AsanaSection[] };
+  'asana:get-project-fields': { args: [projectGid: string];                 return: AsanaField[] };
   'asana:complete-task':      { args: [taskGid: string];                     return: CompleteTaskResult };
   'asana:refresh':            { args: [];                                    return: void };
 
@@ -194,6 +209,7 @@ export interface IpcInvokeChannelMap {
   'app:detect-browsers':      { args: [];                                    return: BrowserInfo[] };
   'app:download-update':      { args: [];                                    return: void };
   'app:restart-for-update':   { args: [];                                    return: void };
+  'app:export-csv':           { args: [filename: string, csv: string];       return: boolean };
 
   'update-dialog:get-init-data': { args: [];                                 return: UpdateDialogInitData | null };
 }
@@ -235,8 +251,13 @@ export interface ElectronAPI {
   getProjects(): Promise<AsanaProject[]>;
   getUsers(): Promise<AsanaUser[]>;
   getTaskComments(taskGid: string): Promise<AsanaComment[]>;
+  getProjectSections(projectGid: string): Promise<AsanaSection[]>;
+  getProjectFields(projectGid: string): Promise<AsanaField[]>;
   completeTask(taskGid: string): Promise<CompleteTaskResult>;
   refreshData(): Promise<void>;
+
+  // Export
+  exportCsv(filename: string, csv: string): Promise<boolean>;
 
   // API key
   verifyApiKey(key: string): Promise<VerifyApiKeyResult>;

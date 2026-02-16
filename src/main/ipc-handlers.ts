@@ -1,4 +1,4 @@
-import { ipcMain, app, Menu, shell, clipboard, BrowserWindow } from 'electron';
+import { ipcMain, app, dialog, Menu, shell, clipboard, BrowserWindow } from 'electron';
 import { execSync } from 'child_process';
 import fs from 'fs';
 
@@ -164,6 +164,26 @@ export function registerIpcHandlers({ store, asanaApi, getMainWindow, getSetting
     }
   });
 
+  ipcMain.handle('asana:get-project-sections', async (_, projectGid: string) => {
+    if (!projectGid || typeof projectGid !== 'string') return [];
+    try {
+      return await asanaApi.getProjectSections(projectGid);
+    } catch (err) {
+      console.error('[ipc] Failed to fetch sections:', (err as Error).message);
+      return [];
+    }
+  });
+
+  ipcMain.handle('asana:get-project-fields', async (_, projectGid: string) => {
+    if (!projectGid || typeof projectGid !== 'string') return [];
+    try {
+      return await asanaApi.getProjectFields(projectGid);
+    } catch (err) {
+      console.error('[ipc] Failed to fetch fields:', (err as Error).message);
+      return [];
+    }
+  });
+
   ipcMain.handle('asana:complete-task', async (_, taskGid: string) => {
     if (!taskGid || typeof taskGid !== 'string') return { success: false };
     try {
@@ -183,6 +203,17 @@ export function registerIpcHandlers({ store, asanaApi, getMainWindow, getSetting
 
   ipcMain.handle('app:get-version', () => {
     return app.getVersion();
+  });
+
+  ipcMain.handle('app:export-csv', async (_, filename: string, csv: string) => {
+    if (!filename || typeof filename !== 'string' || typeof csv !== 'string') return false;
+    const result = await dialog.showSaveDialog({
+      defaultPath: filename,
+      filters: [{ name: 'CSV', extensions: ['csv'] }]
+    });
+    if (result.canceled || !result.filePath) return false;
+    fs.writeFileSync(result.filePath, csv, 'utf-8');
+    return true;
   });
 
   // ── Window ──────────────────────────────────────────────────

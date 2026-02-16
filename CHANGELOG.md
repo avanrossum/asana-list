@@ -5,6 +5,13 @@ All notable changes to Panoptisana will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2026-02-16
+
+### Added
+- Project section & field GID surfacing — "Sections & Fields" toggle on each project expands a tabbed panel with copy-GID buttons for both sections and custom fields
+- CSV export for sections and fields — "Export CSV" button on each tab saves a CSV file via native save dialog
+- Fields tab shows field name, type, and GID; includes hint message about needing at least one task in the project
+
 ## [0.5.4] - 2026-02-16
 
 ### Fixed
