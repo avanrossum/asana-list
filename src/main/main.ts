@@ -1,11 +1,14 @@
-const { app, BrowserWindow, nativeTheme, ipcMain, screen, globalShortcut, dialog } = require('electron');
-const path = require('path');
-const { createTray, getTray } = require('./tray');
-const { registerIpcHandlers } = require('./ipc-handlers');
-const { Store } = require('./store');
-const { AsanaAPI } = require('./asana-api');
-const { autoUpdater } = require('electron-updater');
-const { THEME_BG_COLORS, WINDOW_SIZE, SETTINGS_WINDOW_SIZE, UPDATE_DIALOG_SIZE, TIMING, DEFAULT_SETTINGS } = require('./constants');
+import { app, BrowserWindow, nativeTheme, ipcMain, screen, globalShortcut, dialog } from 'electron';
+import path from 'path';
+import { createTray, getTray } from './tray';
+import { registerIpcHandlers } from './ipc-handlers';
+import { Store } from './store';
+import { AsanaAPI } from './asana-api';
+import { autoUpdater } from 'electron-updater';
+import { THEME_BG_COLORS, WINDOW_SIZE, SETTINGS_WINDOW_SIZE, UPDATE_DIALOG_SIZE, TIMING, DEFAULT_SETTINGS } from './constants';
+
+import type { UpdateInfo } from 'electron-updater';
+import type { ResolvedTheme, UpdateDialogInitData, PollDataPacket } from '../shared/types';
 
 const isDev = process.argv.includes('--dev');
 
@@ -13,12 +16,12 @@ const isDev = process.argv.includes('--dev');
 // GLOBAL ERROR HANDLING
 // ══════════════════════════════════════════════════════════════════════════════
 
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', (error: NodeJS.ErrnoException) => {
   if (error.code === 'EPIPE' || error.message?.includes('EPIPE')) return;
   console.error('Uncaught Exception:', error);
 });
 
-process.on('unhandledRejection', (reason) => {
+process.on('unhandledRejection', (reason: unknown) => {
   console.error('Unhandled Rejection:', reason);
 });
 
@@ -26,12 +29,11 @@ process.on('unhandledRejection', (reason) => {
 // GLOBAL STATE
 // ══════════════════════════════════════════════════════════════════════════════
 
-let mainWindow = null;
-let settingsWindow = null;
-let updateDialogWindow = null;
-let store = null;
-let asanaApi = null;
-let tray = null;
+let mainWindow: BrowserWindow | null = null;
+let settingsWindow: BrowserWindow | null = null;
+let updateDialogWindow: (BrowserWindow & { _initData?: UpdateDialogInitData }) | null = null;
+let store: Store | null = null;
+let asanaApi: AsanaAPI | null = null;
 
 // ══════════════════════════════════════════════════════════════════════════════
 // AUTO-UPDATER
@@ -42,25 +44,25 @@ autoUpdater.autoInstallOnAppQuit = true;
 
 let isManualUpdateCheck = false;
 let isRestartingForUpdate = false;
-let downloadProgressWindow = null;
+let downloadProgressWindow: BrowserWindow | null = null;
 
-function formatReleaseNotes(info) {
+function formatReleaseNotes(info: UpdateInfo): string {
   if (!info.releaseNotes) return '';
   if (typeof info.releaseNotes === 'string') return info.releaseNotes;
   if (Array.isArray(info.releaseNotes)) {
-    return info.releaseNotes.map(n => n.note || n).join('\n\n');
+    return info.releaseNotes.map(n => typeof n === 'string' ? n : n.note || '').join('\n\n');
   }
   return '';
 }
 
-function destroyProgressWindow() {
+function destroyProgressWindow(): void {
   if (downloadProgressWindow && !downloadProgressWindow.isDestroyed()) {
     downloadProgressWindow.destroy();
     downloadProgressWindow = null;
   }
 }
 
-function showUpdateDialog(mode, options) {
+function showUpdateDialog(mode: UpdateDialogInitData['mode'], options: { currentVersion?: string; newVersion?: string; releaseNotes?: string }): void {
   if (updateDialogWindow && !updateDialogWindow.isDestroyed()) {
     updateDialogWindow.close();
   }
@@ -81,7 +83,7 @@ function showUpdateDialog(mode, options) {
       nodeIntegration: false,
       sandbox: true
     }
-  });
+  }) as BrowserWindow & { _initData?: UpdateDialogInitData };
 
   // Store init data for the dialog
   updateDialogWindow._initData = {
@@ -103,7 +105,7 @@ function showUpdateDialog(mode, options) {
   });
 }
 
-autoUpdater.on('update-available', (info) => {
+autoUpdater.on('update-available', (info: UpdateInfo) => {
   isManualUpdateCheck = false;
   showUpdateDialog('update-available', {
     newVersion: info.version,
@@ -123,7 +125,7 @@ autoUpdater.on('update-not-available', () => {
   }
 });
 
-autoUpdater.on('update-downloaded', (info) => {
+autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
   destroyProgressWindow();
   const releaseNotes = formatReleaseNotes(info);
   if (store && releaseNotes) {
@@ -135,11 +137,11 @@ autoUpdater.on('update-downloaded', (info) => {
   });
 });
 
-autoUpdater.on('download-progress', (progress) => {
+autoUpdater.on('download-progress', (progress: { percent: number }) => {
   const percent = Math.round(progress.percent);
 
   if (!downloadProgressWindow || downloadProgressWindow.isDestroyed()) {
-    let x, y;
+    let x: number | undefined, y: number | undefined;
     if (mainWindow && !mainWindow.isDestroyed()) {
       const bounds = mainWindow.getBounds();
       x = bounds.x + Math.round((bounds.width - 280) / 2);
@@ -184,7 +186,7 @@ autoUpdater.on('download-progress', (progress) => {
   }
 });
 
-autoUpdater.on('error', (err) => {
+autoUpdater.on('error', (err: Error) => {
   destroyProgressWindow();
   if (!isDev) {
     console.error('Auto-updater error:', err);
@@ -212,13 +214,13 @@ ipcMain.handle('update-dialog:get-init-data', () => {
 
 ipcMain.handle('app:check-for-updates', () => {
   isManualUpdateCheck = true;
-  autoUpdater.checkForUpdates().catch(err => {
+  autoUpdater.checkForUpdates().catch((err: Error) => {
     console.error('[main] Update check failed:', err.message);
   });
 });
 
 ipcMain.handle('app:download-update', () => {
-  autoUpdater.downloadUpdate().catch(err => {
+  autoUpdater.downloadUpdate().catch((err: Error) => {
     console.error('[main] Download update failed:', err.message);
   });
 });
@@ -240,16 +242,16 @@ ipcMain.on('update-dialog:close', () => {
 // THEME
 // ══════════════════════════════════════════════════════════════════════════════
 
-function resolveTheme() {
+function resolveTheme(): ResolvedTheme {
   const settings = store ? store.getSettings() : {};
   const themeSetting = settings.theme || 'system';
   if (themeSetting === 'system') {
     return nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
   }
-  return themeSetting;
+  return themeSetting as ResolvedTheme;
 }
 
-function broadcastTheme(theme) {
+function broadcastTheme(theme: ResolvedTheme): void {
   const windows = [mainWindow, settingsWindow, updateDialogWindow];
   for (const win of windows) {
     if (win && !win.isDestroyed()) {
@@ -258,7 +260,7 @@ function broadcastTheme(theme) {
   }
 }
 
-function broadcastAccent(accent) {
+function broadcastAccent(accent: string): void {
   const windows = [mainWindow, settingsWindow];
   for (const win of windows) {
     if (win && !win.isDestroyed()) {
@@ -267,12 +269,12 @@ function broadcastAccent(accent) {
   }
 }
 
-ipcMain.on('app:apply-theme', (_, theme) => {
+ipcMain.on('app:apply-theme', (_, theme: string) => {
   if (store) store.setSettings({ theme });
   broadcastTheme(resolveTheme());
 });
 
-ipcMain.on('app:apply-accent', (_, accent) => {
+ipcMain.on('app:apply-accent', (_, accent: string) => {
   if (store) store.setSettings({ accentColor: accent });
   broadcastAccent(accent);
 });
@@ -288,12 +290,12 @@ nativeTheme.on('updated', () => {
 // WINDOW MANAGEMENT
 // ══════════════════════════════════════════════════════════════════════════════
 
-function createMainWindow() {
-  const settings = store.getSettings();
+function createMainWindow(): BrowserWindow {
+  const settings = store!.getSettings();
   const theme = resolveTheme();
 
   // Restore saved bounds or use defaults
-  let bounds = settings.windowBounds || {
+  const bounds: { x?: number; y?: number; width: number; height: number } = settings.windowBounds || {
     width: WINDOW_SIZE.DEFAULT_WIDTH,
     height: WINDOW_SIZE.DEFAULT_HEIGHT
   };
@@ -303,8 +305,8 @@ function createMainWindow() {
     const displays = screen.getAllDisplays();
     const onScreen = displays.some(d => {
       const area = d.workArea;
-      return bounds.x >= area.x - 50 && bounds.x < area.x + area.width &&
-             bounds.y >= area.y - 50 && bounds.y < area.y + area.height;
+      return bounds.x! >= area.x - 50 && bounds.x! < area.x + area.width &&
+             bounds.y! >= area.y - 50 && bounds.y! < area.y + area.height;
     });
     if (!onScreen) {
       delete bounds.x;
@@ -336,16 +338,16 @@ function createMainWindow() {
   mainWindow.loadURL(url);
 
   mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
+    mainWindow!.show();
   });
 
   // Save window bounds on move/resize
-  let boundsTimer = null;
+  let boundsTimer: ReturnType<typeof setTimeout> | null = null;
   const saveBounds = () => {
     if (boundsTimer) clearTimeout(boundsTimer);
     boundsTimer = setTimeout(() => {
       if (mainWindow && !mainWindow.isDestroyed()) {
-        store.setSettings({ windowBounds: mainWindow.getBounds() });
+        store!.setSettings({ windowBounds: mainWindow.getBounds() });
       }
     }, TIMING.SAVE_DEBOUNCE_MS);
   };
@@ -354,29 +356,29 @@ function createMainWindow() {
 
   // Hide instead of close
   mainWindow.on('close', (e) => {
-    if (!isRestartingForUpdate && !app.isQuitting) {
+    if (!isRestartingForUpdate && !(app as any).isQuitting) {
       e.preventDefault();
-      mainWindow.hide();
+      mainWindow!.hide();
     }
   });
 
   return mainWindow;
 }
 
-function showMainWindow() {
+function showMainWindow(): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.show();
     mainWindow.focus();
   }
 }
 
-function hideMainWindow() {
+function hideMainWindow(): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.hide();
   }
 }
 
-function openSettings() {
+function openSettings(): void {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     settingsWindow.focus();
     return;
@@ -408,7 +410,7 @@ function openSettings() {
   settingsWindow.loadURL(url);
 
   settingsWindow.once('ready-to-show', () => {
-    settingsWindow.show();
+    settingsWindow!.show();
   });
 
   settingsWindow.on('closed', () => {
@@ -434,20 +436,20 @@ ipcMain.on('app:re-register-hotkey', () => {
 // GLOBAL HOTKEY
 // ══════════════════════════════════════════════════════════════════════════════
 
-let currentHotkey = null;
+let currentHotkey: string | null = null;
 
-function registerGlobalHotkey() {
-  const settings = store.getSettings();
+function registerGlobalHotkey(): void {
+  const settings = store!.getSettings();
   const hotkey = settings.globalHotkey || DEFAULT_SETTINGS.globalHotkey;
 
   // Unregister previous hotkey
   if (currentHotkey) {
-    try { globalShortcut.unregister(currentHotkey); } catch (e) {}
+    try { globalShortcut.unregister(currentHotkey); } catch (_) { /* ignore */ }
   }
 
   try {
     globalShortcut.register(hotkey, () => {
-      if (mainWindow.isVisible()) {
+      if (mainWindow!.isVisible()) {
         hideMainWindow();
       } else {
         showMainWindow();
@@ -455,7 +457,7 @@ function registerGlobalHotkey() {
     });
     currentHotkey = hotkey;
   } catch (err) {
-    console.error('[main] Failed to register hotkey:', err.message);
+    console.error('[main] Failed to register hotkey:', (err as Error).message);
   }
 }
 
@@ -474,11 +476,11 @@ if (!gotTheLock) {
 }
 
 app.on('before-quit', () => {
-  app.isQuitting = true;
+  (app as any).isQuitting = true;
 });
 
 ipcMain.on('app:quit', () => {
-  app.isQuitting = true;
+  (app as any).isQuitting = true;
   app.quit();
 });
 
@@ -500,8 +502,8 @@ app.whenReady().then(() => {
   asanaApi = new AsanaAPI({
     store,
     getApiKey: () => {
-      const settings = store.getSettings();
-      return settings.apiKey ? store.decryptApiKey(settings.apiKey) : null;
+      const settings = store!.getSettings();
+      return settings.apiKey ? store!.decryptApiKey(settings.apiKey) : null;
     }
   });
 
@@ -517,7 +519,7 @@ app.whenReady().then(() => {
   createMainWindow();
 
   // Create tray
-  tray = createTray(mainWindow, showMainWindow, hideMainWindow, openSettings);
+  createTray(mainWindow!, showMainWindow, hideMainWindow, openSettings);
 
   // Register global hotkey
   registerGlobalHotkey();
@@ -527,7 +529,7 @@ app.whenReady().then(() => {
   if (settings.apiKeyVerified && settings.apiKey) {
     asanaApi.startPolling(
       settings.pollIntervalMinutes || TIMING.DEFAULT_POLL_INTERVAL_MINUTES,
-      (data) => {
+      (data: PollDataPacket) => {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('asana:data-updated', data);
         }
@@ -553,9 +555,9 @@ app.whenReady().then(() => {
   }
 
   // Show "What's New" if pending
-  if (settings.pendingWhatsNewNotes) {
+  if ((settings as any).pendingWhatsNewNotes) {
     showUpdateDialog('whats-new', {
-      releaseNotes: settings.pendingWhatsNewNotes
+      releaseNotes: (settings as any).pendingWhatsNewNotes
     });
     store.setSettings({ pendingWhatsNewNotes: null });
   }
@@ -566,7 +568,7 @@ app.on('will-quit', () => {
   if (store) store.flush();
 });
 
-app.on('window-all-closed', (e) => {
+app.on('window-all-closed', () => {
   // Don't quit on window close - we're a tray app
-  e.preventDefault?.();
+  // No-op: prevents default quit behavior for tray-only app
 });

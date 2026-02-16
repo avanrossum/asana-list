@@ -12,4 +12,6 @@ export const ICON_PATHS = {
   folder: 'M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z',
   minimize: 'M20,14H4V10H20',
   close: 'M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z'
-};
+} as const;
+
+export type IconName = keyof typeof ICON_PATHS;

@@ -1,17 +1,19 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type CSSProperties } from 'react';
 
-/**
- * Reusable filter list editor for inclusion/exclusion patterns.
- *
- * @param {Object} props
- * @param {string} props.label - Label above the list (e.g. "Included Tasks (name pattern)")
- * @param {string} props.placeholder - Input placeholder text
- * @param {string[]} props.items - Current list of patterns
- * @param {(value: string) => void} props.onAdd - Callback when adding a pattern
- * @param {(index: number) => void} props.onRemove - Callback when removing by index
- * @param {{ marginTop?: string }} [props.style] - Optional inline style for wrapper
- */
-export default function FilterListEditor({ label, placeholder, items, onAdd, onRemove, style }) {
+// ── Props ───────────────────────────────────────────────────────
+
+interface FilterListEditorProps {
+  label: string;
+  placeholder: string;
+  items: string[];
+  onAdd: (value: string) => void;
+  onRemove: (index: number) => void;
+  style?: CSSProperties;
+}
+
+// ── Component ───────────────────────────────────────────────────
+
+export default function FilterListEditor({ label, placeholder, items, onAdd, onRemove, style }: FilterListEditorProps) {
   const [input, setInput] = useState('');
 
   const handleAdd = useCallback(() => {

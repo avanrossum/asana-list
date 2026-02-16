@@ -4,15 +4,25 @@
 // Extracted from components for testability.
 // ══════════════════════════════════════════════════════════════════════════════
 
+import type { AsanaUser } from './types';
+
+interface DueDateResult {
+  text: string;
+  isOverdue: boolean;
+}
+
+interface CommentSegment {
+  type: 'text' | 'profile' | 'url';
+  value: string;
+  userName?: string | null;
+  url?: string;
+}
+
 /**
  * Format a due date as a human-readable string.
  * Returns "Today", "Tomorrow", or a short date (e.g. "Jan 15").
- *
- * @param {string|null} dueOn - Due date string (YYYY-MM-DD or ISO datetime)
- * @param {Date} [now] - Reference date (defaults to current date, injectable for testing)
- * @returns {{ text: string, isOverdue: boolean } | null}
  */
-export function formatDueDate(dueOn, now = new Date()) {
+export function formatDueDate(dueOn: string | null | undefined, now: Date = new Date()): DueDateResult | null {
   if (!dueOn) return null;
 
   // Date-only strings (YYYY-MM-DD) are parsed as UTC by the Date constructor,
@@ -29,7 +39,7 @@ export function formatDueDate(dueOn, now = new Date()) {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  let text;
+  let text: string;
   if (d.getTime() === today.getTime()) {
     text = 'Today';
   } else if (d.getTime() === tomorrow.getTime()) {
@@ -44,16 +54,12 @@ export function formatDueDate(dueOn, now = new Date()) {
 /**
  * Format a timestamp as a relative time string.
  * Returns "just now", "5m ago", "2h ago", "3d ago", or a short date.
- *
- * @param {string|null} isoTimestamp - ISO 8601 timestamp
- * @param {Date} [now] - Reference date (injectable for testing)
- * @returns {string} Relative time string, or empty string if no timestamp
  */
-export function formatRelativeTime(isoTimestamp, now = new Date()) {
+export function formatRelativeTime(isoTimestamp: string | null | undefined, now: Date = new Date()): string {
   if (!isoTimestamp) return '';
 
   const date = new Date(isoTimestamp);
-  const diffMs = now - date;
+  const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
@@ -77,16 +83,12 @@ export function formatRelativeTime(isoTimestamp, now = new Date()) {
  *
  * This is the pure logic layer — the React component wraps these segments
  * in <a> tags and click handlers.
- *
- * @param {string} text - Comment text
- * @param {Array} users - Cached workspace users [{ gid, name }]
- * @returns {Array<{ type: 'text'|'profile'|'url', value: string, userName?: string, url?: string }>|null}
  */
-export function parseCommentSegments(text, users) {
+export function parseCommentSegments(text: string | null | undefined, users: AsanaUser[]): CommentSegment[] | null {
   if (!text) return null;
 
   // Build user GID → name lookup
-  const userMap = {};
+  const userMap: Record<string, string> = {};
   if (users && users.length > 0) {
     for (const u of users) {
       userMap[u.gid] = u.name;
@@ -95,8 +97,8 @@ export function parseCommentSegments(text, users) {
 
   // Replace profile links with placeholder tokens
   const profileRegex = /https:\/\/app\.asana\.com\/\d+\/\d+\/profile\/(\d+)/g;
-  const profileMatches = [];
-  const processed = text.replace(profileRegex, (match, userGid) => {
+  const profileMatches: { token: string; userGid: string; url: string }[] = [];
+  const processed = text.replace(profileRegex, (match, userGid: string) => {
     const token = `__PROFILE_${profileMatches.length}__`;
     profileMatches.push({ token, userGid, url: match });
     return token;
@@ -110,7 +112,7 @@ export function parseCommentSegments(text, users) {
     : urlRegex;
 
   const parts = processed.split(tokenPattern);
-  const segments = [];
+  const segments: CommentSegment[] = [];
 
   for (const part of parts) {
     if (!part) continue;

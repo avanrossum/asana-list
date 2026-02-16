@@ -1,39 +1,45 @@
 import { describe, it, expect } from 'vitest';
-import { applyItemFilters, filterAndSortTasks, filterAndSortProjects } from './filters.js';
+import { applyItemFilters, filterAndSortTasks, filterAndSortProjects } from './filters';
+
+import type { AsanaTask, AsanaProject } from './types';
 
 // ── Test Data ────────────────────────────────────────────────
 
-const makeTasks = () => [
+const makeTasks = (): AsanaTask[] => [
   {
-    gid: '1', name: 'Fix login bug', assignee: { name: 'Alice', gid: 'u1' },
+    gid: '1', name: 'Fix login bug', completed: false,
+    assignee: { name: 'Alice', gid: 'u1' },
     projects: [{ gid: 'p1', name: 'Backend' }],
-    modified_at: '2026-02-10T10:00:00Z', due_on: '2026-02-15',
+    modified_at: '2026-02-10T10:00:00Z', due_on: '2026-02-15', due_at: null,
     created_at: '2026-01-01T00:00:00Z'
   },
   {
-    gid: '2', name: 'Design homepage', assignee: { name: 'Bob', gid: 'u2' },
+    gid: '2', name: 'Design homepage', completed: false,
+    assignee: { name: 'Bob', gid: 'u2' },
     projects: [{ gid: 'p2', name: 'Frontend' }],
-    modified_at: '2026-02-12T10:00:00Z', due_on: '2026-02-20',
+    modified_at: '2026-02-12T10:00:00Z', due_on: '2026-02-20', due_at: null,
     created_at: '2026-01-15T00:00:00Z'
   },
   {
-    gid: '3', name: 'Write tests', assignee: { name: 'Alice', gid: 'u1' },
+    gid: '3', name: 'Write tests', completed: false,
+    assignee: { name: 'Alice', gid: 'u1' },
     projects: [{ gid: 'p1', name: 'Backend' }],
-    modified_at: '2026-02-14T10:00:00Z', due_on: null,
+    modified_at: '2026-02-14T10:00:00Z', due_on: null, due_at: null,
     created_at: '2026-02-01T00:00:00Z'
   },
   {
-    gid: '4', name: 'Update README', assignee: null,
+    gid: '4', name: 'Update README', completed: false,
+    assignee: null,
     projects: [{ gid: 'p2', name: 'Frontend' }],
-    modified_at: '2026-02-08T10:00:00Z', due_on: '2026-02-10',
+    modified_at: '2026-02-08T10:00:00Z', due_on: '2026-02-10', due_at: null,
     created_at: '2026-01-20T00:00:00Z'
   }
 ];
 
-const makeProjects = () => [
-  { gid: 'p1', name: 'Backend', owner: { name: 'Alice' }, members: [{ gid: 'u1' }] },
-  { gid: 'p2', name: 'Frontend', owner: { name: 'Bob' }, members: [{ gid: 'u2' }, { gid: 'u1' }] },
-  { gid: 'p3', name: 'Design System', owner: { name: 'Carol' }, members: [{ gid: 'u3' }] }
+const makeProjects = (): AsanaProject[] => [
+  { gid: 'p1', name: 'Backend', archived: false, color: 'dark-blue', modified_at: '2026-02-10T10:00:00Z', owner: { name: 'Alice' }, members: [{ gid: 'u1' }] },
+  { gid: 'p2', name: 'Frontend', archived: false, color: 'dark-green', modified_at: '2026-02-12T10:00:00Z', owner: { name: 'Bob' }, members: [{ gid: 'u2' }, { gid: 'u1' }] },
+  { gid: 'p3', name: 'Design System', archived: false, color: 'dark-red', modified_at: '2026-02-14T10:00:00Z', owner: { name: 'Carol' }, members: [{ gid: 'u3' }] }
 ];
 
 // ── applyItemFilters ─────────────────────────────────────────
@@ -88,7 +94,7 @@ describe('applyItemFilters', () => {
   it('handles empty pattern strings gracefully', () => {
     const items = makeTasks();
     const result = applyItemFilters(items, 'task', {
-      excludedTaskPatterns: ['', null, undefined]
+      excludedTaskPatterns: ['', null as unknown as string, undefined as unknown as string]
     });
     expect(result).toHaveLength(4);
   });
@@ -111,7 +117,7 @@ describe('filterAndSortTasks', () => {
   it('filters by project GID', () => {
     const result = filterAndSortTasks(makeTasks(), { selectedProjectGid: 'p1' });
     expect(result).toHaveLength(2);
-    expect(result.every(t => t.projects.some(p => p.gid === 'p1'))).toBe(true);
+    expect(result.every(t => t.projects!.some(p => p.gid === 'p1'))).toBe(true);
   });
 
   it('filters by search query on task name (case-insensitive)', () => {
@@ -152,7 +158,7 @@ describe('filterAndSortTasks', () => {
     const result = filterAndSortTasks(makeTasks(), { sortBy: 'assignee' });
     // '' (no assignee) sorts first in localeCompare
     expect(result[0].gid).toBe('4'); // no assignee
-    expect(result[1].assignee.name).toBe('Alice');
+    expect(result[1].assignee!.name).toBe('Alice');
   });
 
   it('sorts by created date (newest first)', () => {

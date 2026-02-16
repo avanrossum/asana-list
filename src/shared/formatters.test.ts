@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { formatDueDate, formatRelativeTime, parseCommentSegments } from './formatters.js';
+import { formatDueDate, formatRelativeTime, parseCommentSegments } from './formatters';
+
+import type { AsanaUser } from './types';
 
 // ── formatDueDate ────────────────────────────────────────────
 
@@ -17,30 +19,30 @@ describe('formatDueDate', () => {
 
   it('returns "Today" for today\'s date', () => {
     const result = formatDueDate('2026-02-15', now);
-    expect(result.text).toBe('Today');
-    expect(result.isOverdue).toBe(false);
+    expect(result!.text).toBe('Today');
+    expect(result!.isOverdue).toBe(false);
   });
 
   it('returns "Tomorrow" for tomorrow\'s date', () => {
     const result = formatDueDate('2026-02-16', now);
-    expect(result.text).toBe('Tomorrow');
-    expect(result.isOverdue).toBe(false);
+    expect(result!.text).toBe('Tomorrow');
+    expect(result!.isOverdue).toBe(false);
   });
 
   it('returns short date for other dates', () => {
     const result = formatDueDate('2026-03-10', now);
-    expect(result.text).toBe('Mar 10');
-    expect(result.isOverdue).toBe(false);
+    expect(result!.text).toBe('Mar 10');
+    expect(result!.isOverdue).toBe(false);
   });
 
   it('detects overdue dates', () => {
     const result = formatDueDate('2026-02-10', now);
-    expect(result.isOverdue).toBe(true);
+    expect(result!.isOverdue).toBe(true);
   });
 
   it('yesterday is overdue', () => {
     const result = formatDueDate('2026-02-14', now);
-    expect(result.isOverdue).toBe(true);
+    expect(result!.isOverdue).toBe(true);
   });
 });
 
@@ -94,7 +96,7 @@ describe('formatRelativeTime', () => {
 // ── parseCommentSegments ─────────────────────────────────────
 
 describe('parseCommentSegments', () => {
-  const users = [
+  const users: AsanaUser[] = [
     { gid: '12345', name: 'Alice Smith' },
     { gid: '67890', name: 'Bob Jones' }
   ];
@@ -110,49 +112,49 @@ describe('parseCommentSegments', () => {
   it('returns plain text as a single text segment', () => {
     const result = parseCommentSegments('Hello world', users);
     expect(result).toHaveLength(1);
-    expect(result[0]).toEqual({ type: 'text', value: 'Hello world' });
+    expect(result![0]).toEqual({ type: 'text', value: 'Hello world' });
   });
 
   it('parses a general URL', () => {
     const result = parseCommentSegments('Check https://example.com/page here', users);
     expect(result).toHaveLength(3);
-    expect(result[0]).toEqual({ type: 'text', value: 'Check ' });
-    expect(result[1]).toEqual({ type: 'url', value: 'https://example.com/page', url: 'https://example.com/page' });
-    expect(result[2]).toEqual({ type: 'text', value: ' here' });
+    expect(result![0]).toEqual({ type: 'text', value: 'Check ' });
+    expect(result![1]).toEqual({ type: 'url', value: 'https://example.com/page', url: 'https://example.com/page' });
+    expect(result![2]).toEqual({ type: 'text', value: ' here' });
   });
 
   it('truncates URLs longer than 50 characters', () => {
     const longUrl = 'https://example.com/very/long/path/that/exceeds/fifty/characters/in/total';
     const result = parseCommentSegments(longUrl, users);
-    const urlSegment = result.find(s => s.type === 'url');
-    expect(urlSegment.value.length).toBeLessThanOrEqual(53); // 50 + '...'
-    expect(urlSegment.url).toBe(longUrl); // full URL preserved
+    const urlSegment = result!.find(s => s.type === 'url');
+    expect(urlSegment!.value.length).toBeLessThanOrEqual(53); // 50 + '...'
+    expect(urlSegment!.url).toBe(longUrl); // full URL preserved
   });
 
   it('parses an Asana profile link and resolves user name', () => {
     const text = 'Thanks https://app.asana.com/0/123/profile/12345 for the help';
     const result = parseCommentSegments(text, users);
 
-    const profileSegment = result.find(s => s.type === 'profile');
+    const profileSegment = result!.find(s => s.type === 'profile');
     expect(profileSegment).toBeDefined();
-    expect(profileSegment.value).toBe('Alice Smith');
-    expect(profileSegment.userName).toBe('Alice Smith');
+    expect(profileSegment!.value).toBe('Alice Smith');
+    expect(profileSegment!.userName).toBe('Alice Smith');
   });
 
   it('falls back to "Profile" for unknown user GID', () => {
     const text = 'See https://app.asana.com/0/123/profile/99999 comment';
     const result = parseCommentSegments(text, users);
 
-    const profileSegment = result.find(s => s.type === 'profile');
-    expect(profileSegment.value).toBe('Profile');
-    expect(profileSegment.userName).toBeNull();
+    const profileSegment = result!.find(s => s.type === 'profile');
+    expect(profileSegment!.value).toBe('Profile');
+    expect(profileSegment!.userName).toBeNull();
   });
 
   it('handles multiple profile links in one comment', () => {
     const text = 'https://app.asana.com/0/1/profile/12345 and https://app.asana.com/0/1/profile/67890';
     const result = parseCommentSegments(text, users);
 
-    const profiles = result.filter(s => s.type === 'profile');
+    const profiles = result!.filter(s => s.type === 'profile');
     expect(profiles).toHaveLength(2);
     expect(profiles[0].value).toBe('Alice Smith');
     expect(profiles[1].value).toBe('Bob Jones');
@@ -162,15 +164,15 @@ describe('parseCommentSegments', () => {
     const text = 'See https://app.asana.com/0/1/profile/12345 and https://example.com';
     const result = parseCommentSegments(text, users);
 
-    expect(result.find(s => s.type === 'profile')).toBeDefined();
-    expect(result.find(s => s.type === 'url')).toBeDefined();
+    expect(result!.find(s => s.type === 'profile')).toBeDefined();
+    expect(result!.find(s => s.type === 'url')).toBeDefined();
   });
 
   it('works with empty users array', () => {
     const text = 'See https://app.asana.com/0/1/profile/12345';
     const result = parseCommentSegments(text, []);
 
-    const profileSegment = result.find(s => s.type === 'profile');
-    expect(profileSegment.value).toBe('Profile');
+    const profileSegment = result!.find(s => s.type === 'profile');
+    expect(profileSegment!.value).toBe('Profile');
   });
 });

@@ -1,4 +1,6 @@
 import js from '@eslint/js';
+import tsParser from '@typescript-eslint/parser';
+import tsPlugin from '@typescript-eslint/eslint-plugin';
 
 export default [
   js.configs.recommended,
@@ -44,15 +46,29 @@ export default [
     }
   },
   {
-    // Main process files use CommonJS
-    files: ['src/main/**/*.js'],
+    // TypeScript files
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
     languageOptions: {
-      sourceType: 'commonjs'
+      parser: tsParser,
+      parserOptions: {
+        ecmaFeatures: { jsx: true }
+      }
+    },
+    plugins: {
+      '@typescript-eslint': tsPlugin
+    },
+    rules: {
+      // Disable base rules in favor of TS-aware versions
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
+      // TypeScript handles undefined references at the type level
+      'no-undef': 'off'
     }
   },
   {
     ignores: [
       'dist/**',
+      'dist-main/**',
       'dist-renderer/**',
       'node_modules/**',
       'build/**'

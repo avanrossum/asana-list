@@ -1,13 +1,29 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type ReactNode } from 'react';
 import Icon from './Icon';
 import { ICON_PATHS } from '../icons';
 import { formatDueDate, formatRelativeTime, parseCommentSegments } from '../../shared/formatters';
+import type { AsanaTask, AsanaUser, AsanaComment, CompleteTaskResult } from '../../shared/types';
+
+// ── Props ───────────────────────────────────────────────────────
+
+interface TaskItemProps {
+  task: AsanaTask;
+  lastSeenModified: string | undefined;
+  onMarkSeen: (taskGid: string, modifiedAt: string) => void;
+  onComplete: (taskGid: string) => void;
+  currentUserId: string | null;
+  cachedUsers: AsanaUser[];
+}
+
+type CompleteState = 'idle' | 'confirming' | 'completing';
+
+// ── Comment Rendering ───────────────────────────────────────────
 
 /**
  * Render parsed comment segments as React elements.
  * Uses parseCommentSegments (pure logic) and wraps results in JSX.
  */
-function renderCommentText(text, users) {
+function renderCommentText(text: string | null | undefined, users: AsanaUser[]): ReactNode {
   const segments = parseCommentSegments(text, users);
   if (!segments) return null;
 
@@ -20,7 +36,7 @@ function renderCommentText(text, users) {
           href="#"
           onClick={(e) => {
             e.preventDefault();
-            window.electronAPI.openUrl(seg.url);
+            window.electronAPI.openUrl(seg.url!);
           }}
           title="Open profile in Asana"
         >
@@ -35,7 +51,7 @@ function renderCommentText(text, users) {
           href="#"
           onClick={(e) => {
             e.preventDefault();
-            window.electronAPI.openUrl(seg.url);
+            window.electronAPI.openUrl(seg.url!);
           }}
           title={seg.url}
         >
@@ -48,6 +64,8 @@ function renderCommentText(text, users) {
   });
 }
 
+// ── Component ───────────────────────────────────────────────────
+
 /**
  * Comment highlighting logic:
  * - We track a "lastSeenModified" timestamp per task (stored in the main process store).
@@ -55,13 +73,13 @@ function renderCommentText(text, users) {
  * - When the user expands comments, we update lastSeenModified to current modified_at.
  * - If the last comment was authored by the "I am" user, suppress the highlight.
  */
-export default function TaskItem({ task, lastSeenModified, onMarkSeen, onComplete, currentUserId, cachedUsers }) {
+export default function TaskItem({ task, lastSeenModified, onMarkSeen, onComplete, currentUserId, cachedUsers }: TaskItemProps) {
   const [commentsExpanded, setCommentsExpanded] = useState(false);
-  const [comments, setComments] = useState(null);
+  const [comments, setComments] = useState<AsanaComment[] | null>(null);
   const [loadingComments, setLoadingComments] = useState(false);
   const [copied, setCopied] = useState(false);
   const [suppressHighlight, setSuppressHighlight] = useState(false);
-  const [completeState, setCompleteState] = useState('idle'); // idle | confirming | completing
+  const [completeState, setCompleteState] = useState<CompleteState>('idle');
 
   // Determine if task has been modified since last comment view
   const taskModified = task.modified_at ? new Date(task.modified_at).getTime() : 0;
@@ -122,7 +140,7 @@ export default function TaskItem({ task, lastSeenModified, onMarkSeen, onComplet
     if (completeState === 'confirming') {
       setCompleteState('completing');
       try {
-        const result = await window.electronAPI.completeTask(task.gid);
+        const result: CompleteTaskResult = await window.electronAPI.completeTask(task.gid);
         if (result.success) {
           onComplete(task.gid);
         } else {
@@ -136,7 +154,7 @@ export default function TaskItem({ task, lastSeenModified, onMarkSeen, onComplet
     }
   }, [completeState, task.gid, onComplete]);
 
-  const handleContextMenu = useCallback((e) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     window.electronAPI.showItemContextMenu({ type: 'task', name: task.name, gid: task.gid });
   }, [task.name, task.gid]);

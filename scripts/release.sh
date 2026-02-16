@@ -76,7 +76,10 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
   exit 1
 fi
 
-# Lint and test
+# Typecheck, lint, and test
+echo_step "Running typecheck..."
+npm run typecheck || { echo_error "Typecheck failed. Fix errors before releasing."; exit 1; }
+
 echo_step "Running lint..."
 npm run lint || { echo_error "Lint failed. Fix errors before releasing."; exit 1; }
 

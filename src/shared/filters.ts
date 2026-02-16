@@ -4,16 +4,35 @@
 // Extracted from components for testability.
 // ══════════════════════════════════════════════════════════════════════════════
 
+import type { AsanaTask, AsanaProject, ItemFilterType, Settings, SortBy } from './types';
+
+/** Minimal item shape required by applyItemFilters */
+interface FilterableItem {
+  gid: string;
+  name: string | null;
+}
+
+interface TaskFilterOptions {
+  searchQuery?: string;
+  sortBy?: SortBy;
+  selectedProjectGid?: string;
+}
+
+interface ProjectFilterOptions {
+  searchQuery?: string;
+  myProjectsOnly?: boolean;
+  currentUserId?: string | null;
+}
+
 /**
  * Apply inclusion/exclusion filters to items (tasks or projects).
  * Canonical implementation — also inlined in asana-api.js (CJS main process).
- *
- * @param {Array} items - Tasks or projects
- * @param {string} type - 'task' or 'project'
- * @param {Object} settings - Filter settings from store
- * @returns {Array} Filtered items
  */
-export function applyItemFilters(items, type, settings) {
+export function applyItemFilters(
+  items: FilterableItem[],
+  type: ItemFilterType,
+  settings: Partial<Settings>
+): FilterableItem[] {
   const gidList = type === 'task'
     ? (settings.excludedTaskGids || [])
     : (settings.excludedProjectGids || []);
@@ -47,15 +66,11 @@ export function applyItemFilters(items, type, settings) {
 
 /**
  * Filter tasks by project and search query, then sort.
- *
- * @param {Array} tasks - Task list
- * @param {Object} options
- * @param {string} [options.searchQuery] - Search text
- * @param {string} [options.sortBy] - Sort key: 'modified', 'due', 'name', 'assignee', 'created'
- * @param {string} [options.selectedProjectGid] - Filter to single project
- * @returns {Array} Filtered and sorted tasks
  */
-export function filterAndSortTasks(tasks, { searchQuery, sortBy, selectedProjectGid } = {}) {
+export function filterAndSortTasks(
+  tasks: AsanaTask[],
+  { searchQuery, sortBy, selectedProjectGid }: TaskFilterOptions = {}
+): AsanaTask[] {
   let result = [...tasks];
 
   // Filter by project
@@ -80,18 +95,18 @@ export function filterAndSortTasks(tasks, { searchQuery, sortBy, selectedProject
   result.sort((a, b) => {
     switch (sortBy) {
       case 'modified':
-        return new Date(b.modified_at || 0) - new Date(a.modified_at || 0);
+        return new Date(b.modified_at || 0).getTime() - new Date(a.modified_at || 0).getTime();
       case 'due': {
         const aDue = a.due_on || a.due_at || '9999-12-31';
         const bDue = b.due_on || b.due_at || '9999-12-31';
-        return new Date(aDue) - new Date(bDue);
+        return new Date(aDue).getTime() - new Date(bDue).getTime();
       }
       case 'name':
         return (a.name || '').localeCompare(b.name || '');
       case 'assignee':
         return (a.assignee?.name || '').localeCompare(b.assignee?.name || '');
       case 'created':
-        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
       default:
         return 0;
     }
@@ -102,15 +117,11 @@ export function filterAndSortTasks(tasks, { searchQuery, sortBy, selectedProject
 
 /**
  * Filter projects by membership and search query, sorted by name.
- *
- * @param {Array} projects - Project list
- * @param {Object} options
- * @param {string} [options.searchQuery] - Search text
- * @param {boolean} [options.myProjectsOnly] - Filter to current user's projects
- * @param {string} [options.currentUserId] - Current user GID
- * @returns {Array} Filtered and sorted projects
  */
-export function filterAndSortProjects(projects, { searchQuery, myProjectsOnly, currentUserId } = {}) {
+export function filterAndSortProjects(
+  projects: AsanaProject[],
+  { searchQuery, myProjectsOnly, currentUserId }: ProjectFilterOptions = {}
+): AsanaProject[] {
   let result = [...projects];
 
   // Filter to only projects the current user is a member of

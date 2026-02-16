@@ -1,6 +1,8 @@
-const { contextBridge, ipcRenderer } = require('electron');
+import { contextBridge, ipcRenderer } from 'electron';
 
-contextBridge.exposeInMainWorld('settingsAPI', {
+import type { SettingsAPI } from '../shared/types';
+
+const settingsAPI: SettingsAPI = {
   // ── Settings ────────────────────────────────────────────────
   getSettings: () => ipcRenderer.invoke('store:get-settings'),
   setSettings: (updates) => ipcRenderer.invoke('store:set-settings', updates),
@@ -28,13 +30,15 @@ contextBridge.exposeInMainWorld('settingsAPI', {
 
   // ── Events ──────────────────────────────────────────────────
   onThemeChanged: (callback) => {
-    const handler = (_, theme) => callback(theme);
+    const handler = (_: Electron.IpcRendererEvent, theme: unknown) => callback(theme as any);
     ipcRenderer.on('theme:changed', handler);
     return () => ipcRenderer.removeListener('theme:changed', handler);
   },
   onAccentChanged: (callback) => {
-    const handler = (_, accent) => callback(accent);
+    const handler = (_: Electron.IpcRendererEvent, accent: unknown) => callback(accent as any);
     ipcRenderer.on('accent:changed', handler);
     return () => ipcRenderer.removeListener('accent:changed', handler);
   }
-});
+};
+
+contextBridge.exposeInMainWorld('settingsAPI', settingsAPI);

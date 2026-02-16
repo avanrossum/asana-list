@@ -4,55 +4,58 @@
 // Manages polling, task/project/user fetching, and comment retrieval.
 // ══════════════════════════════════════════════════════════════════════════════
 
-// Inline filter logic (mirrors shared/filters.js — main process is CJS, can't import ESM)
-function applyItemFilters(items, type, settings) {
-  const gidList = type === 'task'
-    ? (settings.excludedTaskGids || [])
-    : (settings.excludedProjectGids || []);
-  const excludePatterns = type === 'task'
-    ? (settings.excludedTaskPatterns || [])
-    : (settings.excludedProjectPatterns || []);
-  const includePatterns = type === 'task'
-    ? (settings.includedTaskPatterns || [])
-    : (settings.includedProjectPatterns || []);
-
-  return items.filter(item => {
-    const name = (item.name || '').toLowerCase();
-    if (includePatterns.length > 0) {
-      const matchesAny = includePatterns.some(p => p && name.includes(p.toLowerCase()));
-      if (!matchesAny) return false;
-    }
-    if (gidList.includes(item.gid)) return false;
-    for (const pattern of excludePatterns) {
-      if (pattern && name.includes(pattern.toLowerCase())) return false;
-    }
-    return true;
-  });
-}
+import { applyItemFilters } from '../shared/filters';
+import type {
+  AsanaTask, AsanaProject, AsanaUser, AsanaComment,
+  AsanaWorkspace, PollDataPacket, VerifyApiKeyResult,
+  ItemFilterType, Settings
+} from '../shared/types';
+import type { Store } from './store';
 
 const BASE_URL = 'https://app.asana.com/api/1.0';
 const MAX_RETRIES = 3;
 const DEFAULT_MAX_SEARCH_PAGES = 20; // Default safety cap: 2,000 tasks
 
-class AsanaAPI {
-  constructor({ store, getApiKey }) {
+interface AsanaAPIOptions {
+  store: Store;
+  getApiKey: () => string | null;
+}
+
+interface AsanaResponse<T = unknown> {
+  data: T;
+  next_page?: { offset: string } | null;
+}
+
+interface FetchAllSearchOptions extends RequestInit {
+  maxPages?: number;
+}
+
+type PollCallback = (data: PollDataPacket) => void;
+type PollStartedCallback = () => void;
+
+export class AsanaAPI {
+  private _store: Store;
+  private _getApiKey: () => string | null;
+  private _pollTimer: ReturnType<typeof setInterval> | null = null;
+  private _onUpdate: PollCallback | null = null;
+  private _onPollStarted: PollStartedCallback | null = null;
+
+  constructor({ store, getApiKey }: AsanaAPIOptions) {
     this._store = store;
     this._getApiKey = getApiKey;
-    this._pollTimer = null;
-    this._onUpdate = null;
   }
 
   // ── HTTP ────────────────────────────────────────────────────
 
-  async _fetch(endpoint, options = {}, retryCount = 0) {
+  private async _fetch<T = unknown>(endpoint: string, options: RequestInit = {}, retryCount = 0): Promise<AsanaResponse<T>> {
     const apiKey = this._getApiKey();
     if (!apiKey) throw new Error('No API key configured');
 
     const url = `${BASE_URL}${endpoint}`;
-    const headers = {
+    const headers: Record<string, string> = {
       'Authorization': `Bearer ${apiKey}`,
       'Accept': 'application/json',
-      ...options.headers
+      ...(options.headers as Record<string, string> || {})
     };
 
     const response = await fetch(url, { ...options, headers });
@@ -63,7 +66,7 @@ class AsanaAPI {
       const waitMs = Math.min(retryAfter, 120) * 1000;
       console.warn(`[asana-api] Rate limited, retrying in ${retryAfter}s (attempt ${retryCount + 1}/${MAX_RETRIES})`);
       await new Promise(resolve => setTimeout(resolve, waitMs));
-      return this._fetch(endpoint, options, retryCount + 1);
+      return this._fetch<T>(endpoint, options, retryCount + 1);
     }
 
     if (!response.ok) {
@@ -72,22 +75,22 @@ class AsanaAPI {
       throw new Error(`Asana API ${response.status}: ${body}`);
     }
 
-    return response.json();
+    return response.json() as Promise<AsanaResponse<T>>;
   }
 
   // Paginate through all results for a given endpoint
-  async _fetchAll(endpoint, options = {}) {
-    let allData = [];
-    let nextPage = null;
+  private async _fetchAll<T>(endpoint: string, options: RequestInit = {}): Promise<T[]> {
+    let allData: T[] = [];
+    let nextPage: string | null = null;
     const separator = endpoint.includes('?') ? '&' : '?';
     const limit = 100;
 
     do {
-      const pageUrl = nextPage
+      const pageUrl: string = nextPage
         ? `${endpoint}${separator}offset=${nextPage}&limit=${limit}`
         : `${endpoint}${separator}limit=${limit}`;
 
-      const result = await this._fetch(pageUrl, options);
+      const result: AsanaResponse<T[]> = await this._fetch<T[]>(pageUrl, options);
       allData = allData.concat(result.data || []);
       nextPage = result.next_page?.offset || null;
     } while (nextPage);
@@ -99,13 +102,16 @@ class AsanaAPI {
   // The search API may not support standard next_page/offset pagination.
   // Falls back to manual pagination via created_at.after when next_page is absent.
   // Requires the endpoint to sort by created_at ascending for stable ordering.
-  async _fetchAllSearch(endpoint, { maxPages = DEFAULT_MAX_SEARCH_PAGES, ...options } = {}) {
-    const allData = [];
-    const seenGids = new Set();
+  private async _fetchAllSearch(
+    endpoint: string,
+    { maxPages = DEFAULT_MAX_SEARCH_PAGES, ...options }: FetchAllSearchOptions = {}
+  ): Promise<AsanaTask[]> {
+    const allData: AsanaTask[] = [];
+    const seenGids = new Set<string>();
     const limit = 100;
     const separator = endpoint.includes('?') ? '&' : '?';
-    let offset = null;
-    let afterDate = null;
+    let offset: string | null = null;
+    let afterDate: string | null = null;
 
     for (let page = 0; page < maxPages; page++) {
       // Build page URL
@@ -116,7 +122,7 @@ class AsanaAPI {
         pageUrl += `&created_at.after=${afterDate}`;
       }
 
-      const result = await this._fetch(pageUrl, options);
+      const result = await this._fetch<AsanaTask[]>(pageUrl, options);
       const pageData = result.data || [];
 
       // Deduplicate by GID (search results can be unstable across pages)
@@ -157,25 +163,25 @@ class AsanaAPI {
 
   // ── API Methods ─────────────────────────────────────────────
 
-  async verifyApiKey() {
+  async verifyApiKey(): Promise<VerifyApiKeyResult> {
     try {
-      const result = await this._fetch('/users/me');
+      const result = await this._fetch<AsanaUser>('/users/me');
       return { valid: true, user: result.data };
     } catch (err) {
-      return { valid: false, error: err.message };
+      return { valid: false, error: (err as Error).message };
     }
   }
 
-  async getWorkspaces() {
-    const result = await this._fetch('/workspaces?limit=100');
+  async getWorkspaces(): Promise<AsanaWorkspace[]> {
+    const result = await this._fetch<AsanaWorkspace[]>('/workspaces?limit=100');
     return result.data || [];
   }
 
-  async getUsers(workspaceGid) {
-    return this._fetchAll(`/workspaces/${workspaceGid}/users?opt_fields=name,email,photo.image_60x60`);
+  async getUsers(workspaceGid: string): Promise<AsanaUser[]> {
+    return this._fetchAll<AsanaUser>(`/workspaces/${workspaceGid}/users?opt_fields=name,email,photo.image_60x60`);
   }
 
-  async getTasks(workspaceGid, assigneeGid) {
+  async getTasks(workspaceGid: string, assigneeGid: string | null): Promise<AsanaTask[]> {
     const fields = 'name,assignee.name,assignee.gid,completed,due_on,due_at,modified_at,created_at,num_subtasks,projects.name,projects.gid,memberships.section.name';
     const assigneeParam = assigneeGid ? `&assignee=${assigneeGid}` : '';
     const settings = this._store.getSettings();
@@ -191,12 +197,12 @@ class AsanaAPI {
     );
   }
 
-  async getProjects(workspaceGid) {
+  async getProjects(workspaceGid: string): Promise<AsanaProject[]> {
     const fields = 'name,archived,color,modified_at,owner.name,members.gid,current_status.title,current_status.color';
-    return this._fetchAll(`/workspaces/${workspaceGid}/projects?archived=false&opt_fields=${fields}`);
+    return this._fetchAll<AsanaProject>(`/workspaces/${workspaceGid}/projects?archived=false&opt_fields=${fields}`);
   }
 
-  async completeTask(taskGid) {
+  async completeTask(taskGid: string): Promise<AsanaResponse> {
     return this._fetch(`/tasks/${taskGid}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -204,9 +210,9 @@ class AsanaAPI {
     });
   }
 
-  async getTaskComments(taskGid) {
+  async getTaskComments(taskGid: string): Promise<AsanaComment[]> {
     const fields = 'text,html_text,created_by.name,created_at,type';
-    const stories = await this._fetchAll(
+    const stories = await this._fetchAll<AsanaComment & { type: string }>(
       `/tasks/${taskGid}/stories?opt_fields=${fields}`
     );
     // Filter to only comments (not system stories)
@@ -215,7 +221,7 @@ class AsanaAPI {
 
   // ── Polling ─────────────────────────────────────────────────
 
-  startPolling(intervalMinutes, onUpdate, onPollStarted) {
+  startPolling(intervalMinutes: number, onUpdate: PollCallback, onPollStarted?: PollStartedCallback): void {
     this._onUpdate = onUpdate;
     this._onPollStarted = onPollStarted || null;
     this.stopPolling();
@@ -228,25 +234,25 @@ class AsanaAPI {
     this._pollTimer = setInterval(() => this._poll(), intervalMs);
   }
 
-  stopPolling() {
+  stopPolling(): void {
     if (this._pollTimer) {
       clearInterval(this._pollTimer);
       this._pollTimer = null;
     }
   }
 
-  restartPolling(intervalMinutes) {
+  restartPolling(intervalMinutes: number): void {
     if (this._onUpdate) {
-      this.startPolling(intervalMinutes, this._onUpdate, this._onPollStarted);
+      this.startPolling(intervalMinutes, this._onUpdate, this._onPollStarted || undefined);
     }
   }
 
   /** Public entry point — use this instead of _poll() */
-  async refresh() {
+  async refresh(): Promise<void> {
     return this._poll();
   }
 
-  async _poll() {
+  private async _poll(): Promise<void> {
     try {
       const settings = this._store.getSettings();
       if (!settings.apiKeyVerified) return;
@@ -269,7 +275,7 @@ class AsanaAPI {
       }
 
       // Determine which users to fetch tasks for
-      let tasks = [];
+      let tasks: AsanaTask[] = [];
       let unfilteredTaskCount = 0;
       if (settings.showOnlyMyTasks && settings.currentUserId) {
         tasks = await this.getTasks(workspaceGid, settings.currentUserId);
@@ -283,7 +289,7 @@ class AsanaAPI {
         );
         // Merge and deduplicate by gid, filter to direct assignments only
         const selectedSet = new Set(settings.selectedUserIds);
-        const seen = new Set();
+        const seen = new Set<string>();
         for (const set of taskSets) {
           unfilteredTaskCount += set.length;
           for (const task of set) {
@@ -300,12 +306,12 @@ class AsanaAPI {
       }
 
       // Apply exclusion/inclusion filters
-      tasks = this._applyFilters(tasks, 'task', settings);
+      tasks = this._applyFilters(tasks, 'task', settings) as AsanaTask[];
 
       // Fetch projects
       let projects = await this.getProjects(workspaceGid);
       const unfilteredProjectCount = projects.length;
-      projects = this._applyFilters(projects, 'project', settings);
+      projects = this._applyFilters(projects, 'project', settings) as AsanaProject[];
 
       // Cache results
       this._store.setCachedTasks(tasks);
@@ -316,16 +322,14 @@ class AsanaAPI {
         this._onUpdate({ tasks, projects, unfilteredTaskCount, unfilteredProjectCount });
       }
     } catch (err) {
-      console.error('[asana-api] Poll failed:', err.message);
+      console.error('[asana-api] Poll failed:', (err as Error).message);
       if (this._onUpdate) {
-        this._onUpdate({ error: err.message });
+        this._onUpdate({ error: (err as Error).message });
       }
     }
   }
 
-  _applyFilters(items, type, settings) {
-    return applyItemFilters(items, type, settings);
+  private _applyFilters(items: AsanaTask[] | AsanaProject[], type: ItemFilterType, settings: Partial<Settings>): AsanaTask[] | AsanaProject[] {
+    return applyItemFilters(items, type, settings) as AsanaTask[] | AsanaProject[];
   }
 }
-
-module.exports = { AsanaAPI };

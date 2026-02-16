@@ -1,24 +1,31 @@
-const { ipcMain, app, Menu, shell } = require('electron');
-const { execSync } = require('child_process');
-const fs = require('fs');
+import { ipcMain, app, Menu, shell, clipboard, BrowserWindow } from 'electron';
+import { execSync } from 'child_process';
+import fs from 'fs';
+
+import type { Store } from './store';
+import type { AsanaAPI } from './asana-api';
+import type { MaskedSettings, ContextMenuItem, BrowserInfo } from '../shared/types';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // IPC HANDLER REGISTRATION
 // ══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Register all IPC handlers
- * @param {Object} deps - { store, asanaApi, getMainWindow, getSettingsWindow }
- */
-function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow }) {
+interface IpcHandlerDeps {
+  store: Store;
+  asanaApi: AsanaAPI;
+  getMainWindow: () => BrowserWindow | null;
+  getSettingsWindow: () => BrowserWindow | null;
+}
+
+export function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow }: IpcHandlerDeps): void {
 
   // Helper: return settings with apiKey masked
-  function getMaskedSettings() {
+  function getMaskedSettings(): MaskedSettings {
     const settings = store.getSettings();
     return {
       ...settings,
       apiKey: settings.apiKey ? '••••••••' : null
-    };
+    } as MaskedSettings;
   }
 
   // ── Store: Settings ─────────────────────────────────────────
@@ -27,18 +34,18 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
     return getMaskedSettings();
   });
 
-  ipcMain.handle('store:set-settings', (_, updates) => {
+  ipcMain.handle('store:set-settings', (_, updates: Partial<MaskedSettings>) => {
     if (!updates || typeof updates !== 'object') return;
 
     // Don't allow setting apiKey through this handler
-    delete updates.apiKey;
-    delete updates.apiKeyVerified;
+    delete (updates as Record<string, unknown>).apiKey;
+    delete (updates as Record<string, unknown>).apiKeyVerified;
 
     store.setSettings(updates);
 
     // If poll interval changed, restart polling
     if ('pollIntervalMinutes' in updates) {
-      asanaApi.restartPolling(updates.pollIntervalMinutes);
+      asanaApi.restartPolling(updates.pollIntervalMinutes!);
     }
 
     // Always return masked settings
@@ -51,14 +58,14 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
     return store.getSeenTimestamps();
   });
 
-  ipcMain.handle('store:set-seen-timestamp', (_, taskGid, timestamp) => {
+  ipcMain.handle('store:set-seen-timestamp', (_, taskGid: string, timestamp: string) => {
     if (typeof taskGid !== 'string' || typeof timestamp !== 'string') return;
     store.setSeenTimestamp(taskGid, timestamp);
   });
 
   // ── Asana: API Key ──────────────────────────────────────────
 
-  ipcMain.handle('asana:verify-api-key', async (_, key) => {
+  ipcMain.handle('asana:verify-api-key', async (_, key: string) => {
     if (!key || typeof key !== 'string') {
       return { valid: false, error: 'Invalid key' };
     }
@@ -84,7 +91,7 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
           store.setCachedUsers(users);
         }
       } catch (err) {
-        console.error('[ipc] Failed to fetch users after key verify:', err.message);
+        console.error('[ipc] Failed to fetch users after key verify:', (err as Error).message);
       }
 
       // Start polling
@@ -135,24 +142,24 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
     return store.getCachedUsers();
   });
 
-  ipcMain.handle('asana:get-task-comments', async (_, taskGid) => {
+  ipcMain.handle('asana:get-task-comments', async (_, taskGid: string) => {
     if (!taskGid || typeof taskGid !== 'string') return [];
     try {
       return await asanaApi.getTaskComments(taskGid);
     } catch (err) {
-      console.error('[ipc] Failed to fetch comments:', err.message);
+      console.error('[ipc] Failed to fetch comments:', (err as Error).message);
       return [];
     }
   });
 
-  ipcMain.handle('asana:complete-task', async (_, taskGid) => {
+  ipcMain.handle('asana:complete-task', async (_, taskGid: string) => {
     if (!taskGid || typeof taskGid !== 'string') return { success: false };
     try {
       await asanaApi.completeTask(taskGid);
       return { success: true };
     } catch (err) {
-      console.error('[ipc] Failed to complete task:', err.message);
-      return { success: false, error: err.message };
+      console.error('[ipc] Failed to complete task:', (err as Error).message);
+      return { success: false, error: (err as Error).message };
     }
   });
 
@@ -184,7 +191,7 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
 
   // ── Link Opening ───────────────────────────────────────────
 
-  ipcMain.handle('app:open-url', (_, url) => {
+  ipcMain.handle('app:open-url', (_, url: string) => {
     if (!url || typeof url !== 'string') return;
     const settings = store.getSettings();
     const openWith = settings.openLinksIn || 'default';
@@ -209,8 +216,8 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
     }
   });
 
-  ipcMain.handle('app:detect-browsers', () => {
-    const browsers = [];
+  ipcMain.handle('app:detect-browsers', (): BrowserInfo[] => {
+    const browsers: BrowserInfo[] = [];
 
     // Always include default browser option
     browsers.push({ id: 'default', name: 'Default Browser' });
@@ -243,14 +250,14 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
 
   // ── Context Menu ──────────────────────────────────────────
 
-  ipcMain.on('context-menu:item', (event, { type, name, gid }) => {
+  ipcMain.on('context-menu:item', (_, { type, name, gid }: ContextMenuItem) => {
     const excludeKey = type === 'task' ? 'excludedTaskPatterns' : 'excludedProjectPatterns';
-    const template = [
+    const template: Electron.MenuItemConstructorOptions[] = [
       {
-        label: `Exclude "${name.length > 30 ? name.substring(0, 30) + '…' : name}"`,
+        label: `Exclude "${name.length > 30 ? name.substring(0, 30) + '\u2026' : name}"`,
         click: () => {
-          const settings = store.getSettings();
-          const list = [...(settings[excludeKey] || []), name];
+          const settings = store.getSettings() as Record<string, unknown>;
+          const list = [...((settings[excludeKey] as string[]) || []), name];
           store.setSettings({ [excludeKey]: list });
           // Re-poll to apply the new exclusion immediately
           asanaApi.refresh();
@@ -260,14 +267,11 @@ function registerIpcHandlers({ store, asanaApi, getMainWindow, getSettingsWindow
       {
         label: 'Copy GID',
         click: () => {
-          const { clipboard } = require('electron');
           clipboard.writeText(gid);
         }
       }
     ];
     const menu = Menu.buildFromTemplate(template);
-    menu.popup({ window: getMainWindow() });
+    menu.popup({ window: getMainWindow() || undefined });
   });
 }
-
-module.exports = { registerIpcHandlers };

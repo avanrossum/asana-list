@@ -6,29 +6,32 @@ import { ICON_PATHS } from './icons';
 import { applyTheme } from '../shared/applyTheme';
 import { useThemeListener } from '../shared/useThemeListener';
 import './styles/components.css';
+import type { AsanaTask, AsanaProject, AsanaUser, SortBy, PollDataPacket } from '../shared/types';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // APP - Main renderer root component
 // ══════════════════════════════════════════════════════════════════════════════
 
+type TabId = 'tasks' | 'projects';
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState('tasks');
-  const [tasks, setTasks] = useState([]);
-  const [projects, setProjects] = useState([]);
+  const [activeTab, setActiveTab] = useState<TabId>('tasks');
+  const [tasks, setTasks] = useState<AsanaTask[]>([]);
+  const [projects, setProjects] = useState<AsanaProject[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('modified');
-  const [error, setError] = useState(null);
+  const [sortBy, setSortBy] = useState<SortBy>('modified');
+  const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
-  const [unfilteredTaskCount, setUnfilteredTaskCount] = useState(null);
-  const [unfilteredProjectCount, setUnfilteredProjectCount] = useState(null);
+  const [unfilteredTaskCount, setUnfilteredTaskCount] = useState<number | null>(null);
+  const [unfilteredProjectCount, setUnfilteredProjectCount] = useState<number | null>(null);
   const [version, setVersion] = useState('');
-  const [seenTimestamps, setSeenTimestamps] = useState({});
-  const [currentUserId, setCurrentUserId] = useState(null);
-  const [cachedUsers, setCachedUsers] = useState([]);
+  const [seenTimestamps, setSeenTimestamps] = useState<Record<string, string>>({});
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [cachedUsers, setCachedUsers] = useState<AsanaUser[]>([]);
   const [myProjectsOnly, setMyProjectsOnly] = useState(false);
   const [selectedProjectGid, setSelectedProjectGid] = useState('');
-  const searchRef = useRef(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   // ── Init ────────────────────────────────────────────────────
 
@@ -70,7 +73,7 @@ export default function App() {
   // ── Data Updates ────────────────────────────────────────────
 
   useEffect(() => {
-    const unsubData = window.electronAPI.onDataUpdate((data) => {
+    const unsubData = window.electronAPI.onDataUpdate((data: PollDataPacket) => {
       setIsPolling(false);
       if (data.error) {
         setError(data.error);
@@ -101,7 +104,7 @@ export default function App() {
   // ── Keyboard Shortcut ───────────────────────────────────────
 
   useEffect(() => {
-    function handleKeyDown(e) {
+    function handleKeyDown(e: KeyboardEvent) {
       // Cmd/Ctrl+F to focus search
       if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
         e.preventDefault();
@@ -118,7 +121,7 @@ export default function App() {
   // Uses projects referenced on tasks (not the Projects tab data) so the
   // dropdown only shows projects that actually have incomplete tasks.
   const taskProjects = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, string>();
     for (const task of tasks) {
       for (const p of task.projects || []) {
         if (p.gid && p.name && !map.has(p.gid)) {
@@ -178,16 +181,16 @@ export default function App() {
       await window.electronAPI.refreshData();
     } catch (err) {
       setIsPolling(false);
-      setError(err.message);
+      setError((err as Error).message);
     }
   }, [isPolling]);
 
-  const handleMarkSeen = useCallback(async (taskGid, modifiedAt) => {
+  const handleMarkSeen = useCallback(async (taskGid: string, modifiedAt: string) => {
     await window.electronAPI.setSeenTimestamp(taskGid, modifiedAt);
     setSeenTimestamps(prev => ({ ...prev, [taskGid]: modifiedAt }));
   }, []);
 
-  const handleCompleteTask = useCallback((taskGid) => {
+  const handleCompleteTask = useCallback((taskGid: string) => {
     setTasks(prev => prev.filter(t => t.gid !== taskGid));
     setUnfilteredTaskCount(prev => prev != null ? prev - 1 : prev);
   }, []);
@@ -290,7 +293,7 @@ export default function App() {
           <select
             className="sort-select"
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
+            onChange={(e) => setSortBy(e.target.value as SortBy)}
           >
             <option value="modified">Last Modified</option>
             <option value="due">Due Date</option>

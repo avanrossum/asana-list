@@ -1,16 +1,25 @@
 import { useEffect } from 'react';
 
+import type { ResolvedTheme } from './types';
+
 /**
  * Hook to subscribe to theme and accent changes from the main process.
  * Shared between all renderer entry points.
  *
- * @param {Object} api - The window API object (electronAPI, settingsAPI, or updateAPI)
+ * Accepts any preload API object that has onThemeChanged and optionally
+ * onAccentChanged — works with ElectronAPI, SettingsAPI, and UpdateAPI.
  */
-export function useThemeListener(api) {
+
+interface ThemeListenerAPI {
+  onThemeChanged?: (callback: (theme: ResolvedTheme) => void) => () => void;
+  onAccentChanged?: (callback: (accent: string) => void) => () => void;
+}
+
+export function useThemeListener(api: ThemeListenerAPI | null | undefined): void {
   useEffect(() => {
     if (!api?.onThemeChanged) return;
 
-    const unsubTheme = api.onThemeChanged((theme) => {
+    const unsubTheme = api.onThemeChanged((theme: ResolvedTheme) => {
       document.documentElement.classList.add('theme-transitioning');
       document.documentElement.dataset.theme = theme;
       requestAnimationFrame(() => {
@@ -19,7 +28,7 @@ export function useThemeListener(api) {
     });
 
     const unsubAccent = api.onAccentChanged
-      ? api.onAccentChanged((accent) => {
+      ? api.onAccentChanged((accent: string) => {
           document.documentElement.dataset.accent = accent;
         })
       : null;

@@ -2,8 +2,24 @@ import { useState, useEffect, useCallback } from 'react';
 import { applyTheme } from '../shared/applyTheme';
 import { useThemeListener } from '../shared/useThemeListener';
 import FilterListEditor from './components/FilterListEditor';
+import type { MaskedSettings, AsanaUser, BrowserInfo, ThemeSetting, AccentColor, VerifyApiKeyResult } from '../shared/types';
 
-const ACCENT_COLORS = [
+// ── Types ───────────────────────────────────────────────────────
+
+interface AccentColorOption {
+  name: AccentColor;
+  dark: string;
+  light: string;
+}
+
+interface ApiKeyStatus {
+  valid: boolean;
+  message: string;
+}
+
+// ── Constants ───────────────────────────────────────────────────
+
+const ACCENT_COLORS: AccentColorOption[] = [
   { name: 'blue', dark: '#3b82f6', light: '#2563eb' },
   { name: 'purple', dark: '#8b5cf6', light: '#7c3aed' },
   { name: 'pink', dark: '#ec4899', light: '#db2777' },
@@ -13,13 +29,15 @@ const ACCENT_COLORS = [
   { name: 'green', dark: '#10b981', light: '#059669' }
 ];
 
+// ── Component ───────────────────────────────────────────────────
+
 export default function SettingsApp() {
-  const [settings, setSettings] = useState(null);
+  const [settings, setSettings] = useState<MaskedSettings | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState('');
-  const [apiKeyStatus, setApiKeyStatus] = useState(null);
+  const [apiKeyStatus, setApiKeyStatus] = useState<ApiKeyStatus | null>(null);
   const [verifying, setVerifying] = useState(false);
-  const [users, setUsers] = useState([]);
-  const [browsers, setBrowsers] = useState([]);
+  const [users, setUsers] = useState<AsanaUser[]>([]);
+  const [browsers, setBrowsers] = useState<BrowserInfo[]>([]);
   const [version, setVersion] = useState('');
 
   // ── Init ────────────────────────────────────────────────────
@@ -42,7 +60,7 @@ export default function SettingsApp() {
         const hasAsanaApp = (b || []).some(br => br.id === 'asana-desktop');
         if (hasAsanaApp) {
           await window.settingsAPI.setSettings({ openLinksIn: 'asana-desktop' });
-          setSettings(prev => ({ ...prev, openLinksIn: 'asana-desktop' }));
+          setSettings(prev => prev ? { ...prev, openLinksIn: 'asana-desktop' } : prev);
         }
       }
 
@@ -58,10 +76,10 @@ export default function SettingsApp() {
 
   // ── Helpers ─────────────────────────────────────────────────
 
-  const updateSetting = useCallback(async (key, value) => {
+  const updateSetting = useCallback(async (key: string, value: unknown) => {
     const update = { [key]: value };
     await window.settingsAPI.setSettings(update);
-    setSettings(prev => ({ ...prev, ...update }));
+    setSettings(prev => prev ? { ...prev, ...update } : prev);
   }, []);
 
   // ── API Key ─────────────────────────────────────────────────
@@ -71,11 +89,11 @@ export default function SettingsApp() {
     setVerifying(true);
     setApiKeyStatus(null);
     try {
-      const result = await window.settingsAPI.verifyApiKey(apiKeyInput.trim());
+      const result: VerifyApiKeyResult = await window.settingsAPI.verifyApiKey(apiKeyInput.trim());
       if (result.valid) {
         setApiKeyStatus({ valid: true, message: `Verified as ${result.user?.name || 'user'}` });
         setApiKeyInput('');
-        setSettings(prev => ({ ...prev, apiKey: '••••••••', apiKeyVerified: true }));
+        setSettings(prev => prev ? { ...prev, apiKey: '••••••••', apiKeyVerified: true } : prev);
         // Refresh users
         const u = await window.settingsAPI.getUsers();
         setUsers(u || []);
@@ -83,42 +101,43 @@ export default function SettingsApp() {
         setApiKeyStatus({ valid: false, message: result.error || 'Invalid key' });
       }
     } catch (err) {
-      setApiKeyStatus({ valid: false, message: err.message });
+      setApiKeyStatus({ valid: false, message: (err as Error).message });
     }
     setVerifying(false);
   }, [apiKeyInput]);
 
   const handleRemoveKey = useCallback(async () => {
     await window.settingsAPI.removeApiKey();
-    setSettings(prev => ({ ...prev, apiKey: null, apiKeyVerified: false }));
+    setSettings(prev => prev ? { ...prev, apiKey: null, apiKeyVerified: false } : prev);
     setApiKeyStatus(null);
     setUsers([]);
   }, []);
 
   // ── Theme ───────────────────────────────────────────────────
 
-  const handleThemeChange = useCallback((theme) => {
+  const handleThemeChange = useCallback((theme: ThemeSetting) => {
     window.settingsAPI.applyTheme(theme);
     updateSetting('theme', theme);
   }, [updateSetting]);
 
-  const handleAccentChange = useCallback((accent) => {
+  const handleAccentChange = useCallback((accent: AccentColor) => {
     window.settingsAPI.applyAccent(accent);
     updateSetting('accentColor', accent);
   }, [updateSetting]);
 
   // ── User Selection ──────────────────────────────────────────
 
-  const handleCurrentUserChange = useCallback((e) => {
+  const handleCurrentUserChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     updateSetting('currentUserId', e.target.value || null);
   }, [updateSetting]);
 
-  const handleShowOnlyMyTasks = useCallback((e) => {
+  const handleShowOnlyMyTasks = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     updateSetting('showOnlyMyTasks', e.target.checked);
   }, [updateSetting]);
 
-  const handleToggleUser = useCallback((userId) => {
+  const handleToggleUser = useCallback((userId: string) => {
     setSettings(prev => {
+      if (!prev) return prev;
       const selected = prev.selectedUserIds || [];
       const updated = selected.includes(userId)
         ? selected.filter(id => id !== userId)
@@ -130,18 +149,20 @@ export default function SettingsApp() {
 
   // ── Filter List Helpers (shared add/remove for all 4 lists) ─
 
-  const addFilterItem = useCallback((settingsKey, value) => {
+  const addFilterItem = useCallback((settingsKey: string, value: string) => {
     if (!value.trim()) return;
     setSettings(prev => {
-      const list = [...(prev[settingsKey] || []), value.trim()];
+      if (!prev) return prev;
+      const list = [...((prev as Record<string, unknown>)[settingsKey] as string[] || []), value.trim()];
       window.settingsAPI.setSettings({ [settingsKey]: list });
       return { ...prev, [settingsKey]: list };
     });
   }, []);
 
-  const removeFilterItem = useCallback((settingsKey, index) => {
+  const removeFilterItem = useCallback((settingsKey: string, index: number) => {
     setSettings(prev => {
-      const list = [...(prev[settingsKey] || [])];
+      if (!prev) return prev;
+      const list = [...((prev as Record<string, unknown>)[settingsKey] as string[] || [])];
       list.splice(index, 1);
       window.settingsAPI.setSettings({ [settingsKey]: list });
       return { ...prev, [settingsKey]: list };
@@ -150,7 +171,7 @@ export default function SettingsApp() {
 
   // ── Polling ─────────────────────────────────────────────────
 
-  const handlePollIntervalChange = useCallback((e) => {
+  const handlePollIntervalChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value, 10);
     if (val && val >= 1 && val <= 60) {
       updateSetting('pollIntervalMinutes', val);
@@ -159,7 +180,7 @@ export default function SettingsApp() {
 
   // ── Task Fetch Limit ───────────────────────────────────────
 
-  const handleMaxSearchPagesChange = useCallback((e) => {
+  const handleMaxSearchPagesChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value, 10);
     if (val && val >= 1 && val <= 100) {
       updateSetting('maxSearchPages', val);
@@ -168,13 +189,13 @@ export default function SettingsApp() {
 
   // ── Hotkey ──────────────────────────────────────────────────
 
-  const handleHotkeyChange = useCallback((e) => {
+  const handleHotkeyChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     updateSetting('globalHotkey', e.target.value);
     // Re-register the global hotkey in the main process
     window.settingsAPI.reRegisterHotkey();
   }, [updateSetting]);
 
-  const handleOpenLinksInChange = useCallback((e) => {
+  const handleOpenLinksInChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     updateSetting('openLinksIn', e.target.value);
   }, [updateSetting]);
 
@@ -242,7 +263,7 @@ export default function SettingsApp() {
           <div className="form-row">
             <span className="form-label">Theme</span>
             <div className="theme-options">
-              {['dark', 'light', 'system'].map(t => (
+              {(['dark', 'light', 'system'] as ThemeSetting[]).map(t => (
                 <button
                   key={t}
                   className={`theme-option ${settings.theme === t ? 'active' : ''}`}

@@ -1,10 +1,11 @@
 import { useMemo, useState, useCallback } from 'react';
-import Icon from './Icon';
-import { ICON_PATHS } from '../icons';
 import { filterAndSortProjects } from '../../shared/filters';
+import type { AsanaProject } from '../../shared/types';
+
+// ── Color Map ───────────────────────────────────────────────────
 
 // Map Asana project colors to hex values
-const PROJECT_COLORS = {
+const PROJECT_COLORS: Record<string, string> = {
   'dark-pink': '#ea4e9d',
   'dark-green': '#62d26f',
   'dark-blue': '#4186e0',
@@ -26,7 +27,22 @@ const PROJECT_COLORS = {
   'none': '#8890a0'
 };
 
-export default function ProjectList({ projects, searchQuery, myProjectsOnly, currentUserId }) {
+// ── Props ───────────────────────────────────────────────────────
+
+interface ProjectListProps {
+  projects: AsanaProject[];
+  searchQuery: string;
+  myProjectsOnly: boolean;
+  currentUserId: string | null;
+}
+
+interface ProjectItemProps {
+  project: AsanaProject;
+}
+
+// ── Component ───────────────────────────────────────────────────
+
+export default function ProjectList({ projects, searchQuery, myProjectsOnly, currentUserId }: ProjectListProps) {
   const filtered = useMemo(() =>
     filterAndSortProjects(projects, { searchQuery, myProjectsOnly, currentUserId }),
     [projects, searchQuery, myProjectsOnly, currentUserId]
@@ -50,12 +66,16 @@ export default function ProjectList({ projects, searchQuery, myProjectsOnly, cur
     );
   }
 
-  return filtered.map(project => (
-    <ProjectItem key={project.gid} project={project} />
-  ));
+  return (
+    <>
+      {filtered.map(project => (
+        <ProjectItem key={project.gid} project={project} />
+      ))}
+    </>
+  );
 }
 
-function ProjectItem({ project }) {
+function ProjectItem({ project }: ProjectItemProps) {
   const [copied, setCopied] = useState(false);
 
   const handleOpenProject = useCallback(() => {
@@ -73,7 +93,7 @@ function ProjectItem({ project }) {
     }
   }, [project.gid]);
 
-  const handleContextMenu = useCallback((e) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     window.electronAPI.showItemContextMenu({ type: 'project', name: project.name, gid: project.gid });
   }, [project.name, project.gid]);

@@ -6,7 +6,7 @@ module.exports = {
     buildResources: 'build'
   },
   files: [
-    'src/main/**/*',
+    'dist-main/**/*',
     'dist-renderer/**/*',
     'build/trayIconTemplate.png',
     'build/trayIconTemplate@2x.png'

@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "dist-main",
+    "rootDir": "src",
+    "types": ["node"],
+    "lib": ["ES2022"]
+  },
+  "include": [
+    "src/main/**/*.ts",
+    "src/shared/**/*.ts"
+  ],
+  "exclude": [
+    "src/shared/*.test.ts",
+    "src/shared/applyTheme.ts",
+    "src/shared/useThemeListener.ts",
+    "src/shared/global.d.ts"
+  ]
+}

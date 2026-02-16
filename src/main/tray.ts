@@ -1,21 +1,27 @@
-const { Tray, Menu, nativeImage, app } = require('electron');
-const path = require('path');
+import { Tray, Menu, nativeImage, app, BrowserWindow } from 'electron';
+import path from 'path';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // SYSTEM TRAY
 // ══════════════════════════════════════════════════════════════════════════════
 
-let trayInstance = null;
-let trayDeps = null;
+let trayInstance: Tray | null = null;
 
-/**
- * Create the system tray icon and menu
- * @param {BrowserWindow} mainWindow
- * @param {Function} showMainWindow
- * @param {Function} hideMainWindow
- * @param {Function} openSettings
- */
-function createTray(mainWindow, showMainWindow, hideMainWindow, openSettings) {
+interface TrayDeps {
+  mainWindow: BrowserWindow;
+  showMainWindow: () => void;
+  hideMainWindow: () => void;
+  openSettings: () => void;
+}
+
+let trayDeps: TrayDeps | null = null;
+
+export function createTray(
+  mainWindow: BrowserWindow,
+  showMainWindow: () => void,
+  hideMainWindow: () => void,
+  openSettings: () => void
+): Tray {
   const iconPath = path.join(__dirname, '../../build/trayIconTemplate.png');
   const icon = nativeImage.createFromPath(iconPath);
   icon.setTemplateImage(true);
@@ -45,7 +51,7 @@ function createTray(mainWindow, showMainWindow, hideMainWindow, openSettings) {
   return tray;
 }
 
-function buildTrayMenu() {
+function buildTrayMenu(): Menu {
   if (!trayDeps) {
     return Menu.buildFromTemplate([{ label: 'Panoptisana not ready', enabled: false }]);
   }
@@ -54,7 +60,7 @@ function buildTrayMenu() {
   if (!mainWindow || mainWindow.isDestroyed()) {
     return Menu.buildFromTemplate([{ label: 'Panoptisana not ready', enabled: false }]);
   }
-  const menuItems = [];
+  const menuItems: Electron.MenuItemConstructorOptions[] = [];
 
   menuItems.push({
     label: mainWindow.isVisible() ? 'Hide Panoptisana' : 'Show Panoptisana',
@@ -91,8 +97,6 @@ function buildTrayMenu() {
   return Menu.buildFromTemplate(menuItems);
 }
 
-function getTray() {
+export function getTray(): Tray | null {
   return trayInstance;
 }
-
-module.exports = { createTray, getTray };
