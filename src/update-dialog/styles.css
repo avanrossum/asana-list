@@ -40,6 +40,37 @@
   margin-bottom: 16px;
 }
 
+/* ── Download Progress ── */
+.update-progress {
+  margin-bottom: 16px;
+}
+
+.update-progress-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.update-progress-track {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+  height: 6px;
+}
+
+.update-progress-fill {
+  background: var(--accent);
+  height: 100%;
+  transition: width 0.15s ease;
+}
+
+.update-progress-pct {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
 .update-actions {
   display: flex;
   justify-content: flex-end;

@@ -12,6 +12,12 @@ const updateAPI: UpdateAPI = {
     const handler = (_: Electron.IpcRendererEvent, theme: unknown) => callback(theme as any);
     ipcRenderer.on('theme:changed', handler);
     return () => ipcRenderer.removeListener('theme:changed', handler);
+  },
+
+  onDownloadProgress: (callback) => {
+    const handler = (_: Electron.IpcRendererEvent, percent: unknown) => callback(percent as any);
+    ipcRenderer.on('app:download-progress', handler);
+    return () => ipcRenderer.removeListener('app:download-progress', handler);
   }
 };
 

@@ -287,7 +287,6 @@ export class AsanaAPI {
         const selectedSet = new Set(settings.selectedUserIds);
         const seen = new Set<string>();
         for (const set of taskSets) {
-          unfilteredTaskCount += set.length;
           for (const task of set) {
             if (!seen.has(task.gid) && task.assignee && selectedSet.has(task.assignee.gid)) {
               seen.add(task.gid);
@@ -295,6 +294,7 @@ export class AsanaAPI {
             }
           }
         }
+        unfilteredTaskCount = tasks.length;
       } else {
         // No user filter - get all incomplete tasks in workspace
         tasks = await this.getTasks(workspaceGid, null);

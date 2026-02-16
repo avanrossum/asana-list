@@ -5,6 +5,11 @@ All notable changes to Panoptisana will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-02-16
+
+### Fixed
+- Multi-user task count doubled — `unfilteredTaskCount` summed raw API response sizes before deduplication, inflating "out of X" in the status bar when multiple users were selected in "Show tasks for"
+
 ## [0.5.2] - 2026-02-16
 
 ### Added
@@ -13,12 +18,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `demo-data.ts` — 25 tasks, 10 projects, 8 users with realistic names, dates, and project colors
 - `AsanaAPILike` interface in `types.ts` — shared contract satisfied by both `AsanaAPI` and `DemoAsanaAPI`
 
+### Fixed
+- Auto-updater dialog goes empty after clicking "Download Update" — race condition in `showUpdateDialog()` where the old dialog's async `closed` event nulled the new dialog's reference, causing `getInitData()` to return `null`
+- Download progress now displays inline in the update dialog instead of a separate 280x70 window that was hidden behind the dialog
+
 ### Changed
 - `PollCallback` and `PollStartedCallback` types moved from `asana-api.ts` to `types.ts` (shared across both API implementations)
 - `ipc-handlers.ts` now types `asanaApi` as `AsanaAPILike` for polymorphic dispatch
 - Repo renamed from `asana-list` to `panoptisana` — updated electron-builder config, release script, README
 - CI badge added to README
 - Fixed 5 `eqeqeq` lint warnings in `App.tsx` (`!=` replaced with `!== null && !== undefined`)
+- Removed separate download progress window — replaced with `app:download-progress` IPC event sent to update dialog renderer
 
 ## [0.5.1] - 2026-02-15
 

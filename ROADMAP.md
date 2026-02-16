@@ -4,7 +4,7 @@
 
 Open-source Asana task and project visibility tool for macOS. Displays a searchable list of incomplete tasks and active projects with comment tracking and auto-updates.
 
-## Current Version: 0.5.2
+## Current Version: 0.5.3
 
 ### Core Features (v0.1.0)
 - [x] Searchable task list with sorting
@@ -95,6 +95,11 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [x] `AsanaAPILike` interface — polymorphic API contract for real and demo implementations
 - [x] Repo renamed to `panoptisana`, CI badge added to README
 - [x] Lint cleanup: 5 `eqeqeq` warnings fixed in `App.tsx`
+- [x] Fix: Auto-updater dialog race condition — old dialog's `closed` event nulled the new dialog reference
+- [x] Fix: Download progress now shown inline in update dialog (removed separate progress window)
+
+### v0.5.3 Additions
+- [x] Fix: Multi-user task count inflated — `unfilteredTaskCount` now computed after deduplication
 
 ## Next Immediate
 
@@ -107,7 +112,7 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 ## Pre-v1: Code Quality / Architecture
 
 ### Refactoring
-- [ ] Extract auto-updater from `main.ts` into `updater.ts` — auto-updater logic is ~200 lines including download progress window, all event handlers, and 5 IPC handlers. Extracting would drop `main.ts` from 573 to ~370 lines
+- [ ] Extract auto-updater from `main.ts` into `updater.ts` — auto-updater logic is ~150 lines including all event handlers and 5 IPC handlers
 - [ ] Unify polling callback construction — `onUpdate`/`onPollStarted` callbacks are built identically in `main.ts` (startup) and `ipc-handlers.ts` (after key verification). Extract a single factory function
 - [ ] Move update IPC handlers (`update-dialog:*`, `app:check-for-updates`, `app:download-update`, `app:restart-for-update`) into the extracted updater module so the full IPC surface is auditable from fewer files
 - [ ] Extract `_getCache(key)` private method in `store.ts` — `getCachedTasks`/`getCachedProjects`/`getCachedUsers` are identical (get row, parse JSON, return `[]`)
@@ -121,7 +126,7 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 ### Security
 - [ ] Add CSP headers to all BrowserWindows (production builds)
 - [x] Route external URL opens through IPC + `shell.openExternal` instead of `window.open` in renderer (`TaskItem.tsx`, `ProjectList.tsx`)
-- [ ] Add safety comment on `executeJavaScript` string interpolation in download progress window (`main.ts`) — value is always `Math.round()` so safe, but the pattern should be documented
+- [x] ~~Removed `executeJavaScript` string interpolation in download progress window~~ — replaced with IPC-based progress in v0.5.2
 
 ### Input Validation
 - [ ] Validate hotkey format before registering (reject invalid accelerator strings)

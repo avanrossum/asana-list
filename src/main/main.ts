@@ -46,7 +46,6 @@ autoUpdater.autoInstallOnAppQuit = true;
 
 let isManualUpdateCheck = false;
 let isRestartingForUpdate = false;
-let downloadProgressWindow: BrowserWindow | null = null;
 
 function formatReleaseNotes(info: UpdateInfo): string {
   if (!info.releaseNotes) return '';
@@ -57,20 +56,17 @@ function formatReleaseNotes(info: UpdateInfo): string {
   return '';
 }
 
-function destroyProgressWindow(): void {
-  if (downloadProgressWindow && !downloadProgressWindow.isDestroyed()) {
-    downloadProgressWindow.destroy();
-    downloadProgressWindow = null;
-  }
-}
-
 function showUpdateDialog(mode: UpdateDialogInitData['mode'], options: { currentVersion?: string; newVersion?: string; releaseNotes?: string }): void {
-  if (updateDialogWindow && !updateDialogWindow.isDestroyed()) {
-    updateDialogWindow.close();
+  // Close old dialog first — clear reference BEFORE close to prevent the old
+  // 'closed' handler from nulling the new window reference (race condition).
+  const oldWindow = updateDialogWindow;
+  updateDialogWindow = null;
+  if (oldWindow && !oldWindow.isDestroyed()) {
+    oldWindow.close();
   }
 
   const theme = resolveTheme();
-  updateDialogWindow = new BrowserWindow({
+  const newWindow = new BrowserWindow({
     width: UPDATE_DIALOG_SIZE.WIDTH,
     height: UPDATE_DIALOG_SIZE.HEIGHT,
     alwaysOnTop: true,
@@ -87,8 +83,10 @@ function showUpdateDialog(mode: UpdateDialogInitData['mode'], options: { current
     }
   }) as BrowserWindow & { _initData?: UpdateDialogInitData };
 
+  updateDialogWindow = newWindow;
+
   // Store init data for the dialog
-  updateDialogWindow._initData = {
+  newWindow._initData = {
     mode,
     currentVersion: options.currentVersion || app.getVersion(),
     newVersion: options.newVersion || '',
@@ -100,10 +98,13 @@ function showUpdateDialog(mode: UpdateDialogInitData['mode'], options: { current
     ? 'http://localhost:5173/src/update-dialog/index.html'
     : `file://${path.join(__dirname, '../../dist-renderer/src/update-dialog/index.html')}`;
 
-  updateDialogWindow.loadURL(url);
+  newWindow.loadURL(url);
 
-  updateDialogWindow.on('closed', () => {
-    updateDialogWindow = null;
+  newWindow.on('closed', () => {
+    // Only null if this is still the current dialog (prevents race with showUpdateDialog re-entry)
+    if (updateDialogWindow === newWindow) {
+      updateDialogWindow = null;
+    }
   });
 }
 
@@ -128,7 +129,6 @@ autoUpdater.on('update-not-available', () => {
 });
 
 autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
-  destroyProgressWindow();
   const releaseNotes = formatReleaseNotes(info);
   if (store && releaseNotes) {
     store.setSettings({ pendingWhatsNewNotes: releaseNotes });
@@ -141,55 +141,12 @@ autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
 
 autoUpdater.on('download-progress', (progress: { percent: number }) => {
   const percent = Math.round(progress.percent);
-
-  if (!downloadProgressWindow || downloadProgressWindow.isDestroyed()) {
-    let x: number | undefined, y: number | undefined;
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      const bounds = mainWindow.getBounds();
-      x = bounds.x + Math.round((bounds.width - 280) / 2);
-      y = bounds.y + bounds.height + 10;
-    }
-
-    downloadProgressWindow = new BrowserWindow({
-      width: 280,
-      height: 70,
-      x, y,
-      frame: false,
-      alwaysOnTop: true,
-      resizable: false,
-      minimizable: false,
-      maximizable: false,
-      skipTaskbar: true,
-      show: false,
-      backgroundColor: '#1a1d23',
-      webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true }
-    });
-
-    const html = `<!DOCTYPE html><html><body style="margin:0;padding:16px;background:#1a1d23;color:#fff;font-family:-apple-system,system-ui,sans-serif;font-size:13px;">
-      <div style="margin-bottom:8px;">Downloading update...</div>
-      <div style="background:#2a2d33;border-radius:4px;overflow:hidden;height:6px;">
-        <div id="bar" style="background:#3b82f6;height:100%;width:0%;transition:width 0.15s;"></div>
-      </div>
-      <div id="pct" style="margin-top:6px;font-size:11px;color:#888;">0%</div>
-    </body></html>`;
-    downloadProgressWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
-    downloadProgressWindow.once('ready-to-show', () => {
-      if (downloadProgressWindow && !downloadProgressWindow.isDestroyed()) downloadProgressWindow.show();
-    });
-  }
-
-  if (downloadProgressWindow && !downloadProgressWindow.isDestroyed() && downloadProgressWindow.webContents) {
-    downloadProgressWindow.webContents.executeJavaScript(`
-      if (document.getElementById('bar')) {
-        document.getElementById('bar').style.width = '${percent}%';
-        document.getElementById('pct').textContent = '${percent}%';
-      }
-    `).catch(() => {});
+  if (updateDialogWindow && !updateDialogWindow.isDestroyed()) {
+    updateDialogWindow.webContents.send('app:download-progress', percent);
   }
 });
 
 autoUpdater.on('error', (err: Error) => {
-  destroyProgressWindow();
   if (!isDev) {
     console.error('Auto-updater error:', err);
     if (isManualUpdateCheck || err.message?.includes('download')) {

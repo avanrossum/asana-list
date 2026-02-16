@@ -31,6 +31,7 @@ const TITLES: Record<UpdateDialogInitData['mode'], string> = {
 
 export default function UpdateDialog() {
   const [data, setData] = useState<UpdateDialogInitData | null>(null);
+  const [downloadPercent, setDownloadPercent] = useState<number | null>(null);
 
   useEffect(() => {
     async function init() {
@@ -43,6 +44,14 @@ export default function UpdateDialog() {
       }
     }
     init();
+  }, []);
+
+  // Listen for download progress events from main process
+  useEffect(() => {
+    const cleanup = window.updateAPI.onDownloadProgress((percent) => {
+      setDownloadPercent(percent);
+    });
+    return cleanup;
   }, []);
 
   useThemeListener(window.updateAPI);
@@ -74,11 +83,24 @@ export default function UpdateDialog() {
         <div className="update-notes" dangerouslySetInnerHTML={{ __html: safeHtml }} />
       )}
 
+      {mode === 'update-available' && downloadPercent !== null && (
+        <div className="update-progress">
+          <div className="update-progress-label">Downloading update...</div>
+          <div className="update-progress-track">
+            <div className="update-progress-fill" style={{ width: `${downloadPercent}%` }} />
+          </div>
+          <div className="update-progress-pct">{downloadPercent}%</div>
+        </div>
+      )}
+
       <div className="update-actions">
-        {mode === 'update-available' && (
+        {mode === 'update-available' && downloadPercent === null && (
           <>
             <button onClick={() => window.updateAPI.close()}>Later</button>
-            <button className="btn-primary" onClick={() => window.updateAPI.downloadUpdate()}>
+            <button className="btn-primary" onClick={() => {
+              setDownloadPercent(0);
+              window.updateAPI.downloadUpdate();
+            }}>
               Download Update
             </button>
           </>

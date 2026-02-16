@@ -218,6 +218,7 @@ export interface IpcEventChannelMap {
   'settings:updated':         { args: [settings: MaskedSettings] };
   'theme:changed':            { args: [theme: ResolvedTheme] };
   'accent:changed':           { args: [accent: string] };
+  'app:download-progress':    { args: [percent: number] };
 }
 
 
@@ -308,4 +309,5 @@ export interface UpdateAPI {
   close(): void;
 
   onThemeChanged(callback: (theme: ResolvedTheme) => void): () => void;
+  onDownloadProgress(callback: (percent: number) => void): () => void;
 }
