@@ -112,6 +112,8 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 
 - [ ] Fix: CSV export save dialog appears behind the main window — needs `alwaysOnTop` or parent window handling so the native save dialog is visible
 - [ ] Fix: "Only my projects" checkbox missing from the Projects tab — regression, needs immediate resolution
+- [ ] Verify: Status bar "out of X" total no longer appears when using "Show tasks for" multi-select — only the filtered count is shown. This may be working as intended, further verification required
+- [ ] Fix: Changing "Show tasks for" user selection does not immediately update the task list — may be blocked by an in-progress poll, or the settings broadcast isn't triggering a re-filter/re-poll. Possible solution: clear the task list on user selection change and show a "Display conditions changed, refetching..." message until the re-poll completes. Needs investigation (pre-v1)
 - [ ] Create `code_review.md` — document code review standards and process
 - [ ] Full code review against `code_review.md` standards — identify issues, improvements, and action items
 - [ ] Comment count — display number of comments on each task in the task list
