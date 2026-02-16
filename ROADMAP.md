@@ -110,6 +110,7 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [ ] Replace `app.isQuitting` monkey-patch on the Electron `app` object with a module-level `let isQuitting` variable
 - [ ] Replace `updateDialogWindow._initData` with a module-scoped variable instead of storing data on the BrowserWindow object
 - [ ] TypeScript: replace `(err as Error).message` casts with a shared `toErrorMessage()` utility
+- [ ] TypeScript: remove `as any` casts on preload IPC event handlers — type the `IpcRendererEvent` callbacks against the IPC channel maps for proper type safety at the boundary
 
 ### Security
 - [ ] Add CSP headers to all BrowserWindows (production builds)

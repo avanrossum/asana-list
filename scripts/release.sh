@@ -67,7 +67,7 @@ echo ""
 echo "This will:"
 echo "  1. Build Panoptisana v$VERSION (signed & notarized)"
 echo "  2. Create git tag $TAG"
-echo "  3. Push release to avanrossum/asana-list"
+echo "  3. Push release to avanrossum/panoptisana"
 echo ""
 read -p "Continue? (y/N) " -n 1 -r
 echo ""
@@ -118,7 +118,7 @@ else
 fi
 
 # Create release notes from CHANGELOG.md
-echo_step "Publishing to avanrossum/asana-list..."
+echo_step "Publishing to avanrossum/panoptisana..."
 
 NOTES_FILE=$(mktemp)
 trap "rm -f $NOTES_FILE" EXIT
@@ -159,11 +159,11 @@ fi
 
 # Create release
 gh release create "$TAG" \
-  --repo avanrossum/asana-list \
+  --repo avanrossum/panoptisana \
   --title "Panoptisana $TAG" \
   --notes-file "$NOTES_FILE" \
   $FILES_TO_UPLOAD
 
 echo ""
 echo -e "${GREEN}✔ Released Panoptisana $TAG${NC}"
-echo "  https://github.com/avanrossum/asana-list/releases/tag/$TAG"
+echo "  https://github.com/avanrossum/panoptisana/releases/tag/$TAG"

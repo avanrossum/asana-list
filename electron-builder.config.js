@@ -36,7 +36,7 @@ module.exports = {
   publish: {
     provider: 'github',
     owner: 'avanrossum',
-    repo: 'asana-list',
+    repo: 'panoptisana',
     releaseType: 'release'
   }
 };

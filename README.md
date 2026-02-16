@@ -24,13 +24,13 @@ A fast, focused Asana visibility tool for macOS. Lives in your menu bar, shows y
 
 ### Install from Release
 
-Download the latest `.dmg` from the [Releases](https://github.com/avanrossum/asana-list/releases) page.
+Download the latest `.dmg` from the [Releases](https://github.com/avanrossum/panoptisana/releases) page.
 
 ### Build from Source
 
 ```bash
-git clone https://github.com/avanrossum/asana-list.git
-cd asana-list
+git clone https://github.com/avanrossum/panoptisana.git
+cd panoptisana
 npm install
 npm run dev
 ```
