@@ -5,6 +5,21 @@ All notable changes to Panoptisana will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2026-02-16
+
+### Added
+- Demo mode (`PANOPTISANA_DEMO=1`) — launches with realistic fake Asana data for screenshots and video, zero network traffic
+- `DemoAsanaAPI` class in `demo-asana-api.ts` — drop-in replacement for `AsanaAPI` with static demo data
+- `demo-data.ts` — 25 tasks, 10 projects, 8 users with realistic names, dates, and project colors
+- `AsanaAPILike` interface in `types.ts` — shared contract satisfied by both `AsanaAPI` and `DemoAsanaAPI`
+
+### Changed
+- `PollCallback` and `PollStartedCallback` types moved from `asana-api.ts` to `types.ts` (shared across both API implementations)
+- `ipc-handlers.ts` now types `asanaApi` as `AsanaAPILike` for polymorphic dispatch
+- Repo renamed from `asana-list` to `panoptisana` — updated electron-builder config, release script, README
+- CI badge added to README
+- Fixed 5 `eqeqeq` lint warnings in `App.tsx` (`!=` replaced with `!== null && !== undefined`)
+
 ## [0.5.1] - 2026-02-15
 
 ### Changed

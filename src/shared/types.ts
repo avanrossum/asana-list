@@ -104,6 +104,29 @@ export type MaskedSettings = Omit<Settings, 'apiKey'> & {
 };
 
 
+// ── Callback Types ────────────────────────────────────────────────────────
+
+export type PollCallback = (data: PollDataPacket) => void;
+export type PollStartedCallback = () => void;
+
+
+// ── AsanaAPI Interface ────────────────────────────────────────────────────
+// Shared interface satisfied by both AsanaAPI (real) and DemoAsanaAPI (fake).
+// Used by main.ts and ipc-handlers.ts to type the API client polymorphically.
+
+export interface AsanaAPILike {
+  verifyApiKey(): Promise<VerifyApiKeyResult>;
+  getWorkspaces(): Promise<AsanaWorkspace[]>;
+  getUsers(workspaceGid: string): Promise<AsanaUser[]>;
+  getTaskComments(taskGid: string): Promise<AsanaComment[]>;
+  completeTask(taskGid: string): Promise<{ data: unknown }>;
+  startPolling(interval: number, onUpdate: PollCallback, onPollStarted?: PollStartedCallback): void;
+  stopPolling(): void;
+  restartPolling(interval: number): void;
+  refresh(): Promise<void>;
+}
+
+
 // ── IPC Result Types ───────────────────────────────────────────────────────
 
 export interface PollDataPacket {

@@ -4,7 +4,7 @@
 
 Open-source Asana task and project visibility tool for macOS. Displays a searchable list of incomplete tasks and active projects with comment tracking and auto-updates.
 
-## Current Version: 0.5.1
+## Current Version: 0.5.2
 
 ### Core Features (v0.1.0)
 - [x] Searchable task list with sorting
@@ -89,6 +89,12 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [x] `settings:updated` IPC event — main process broadcasts settings changes to renderer for instant filter feedback
 - [x] Right-click "Exclude" is now instant (no re-poll needed)
 - [x] Settings window close broadcasts updated settings immediately, background re-poll for non-filter changes
+
+### v0.5.2 Additions
+- [x] Demo mode via `PANOPTISANA_DEMO=1` env var — fake Asana data for screenshots/video
+- [x] `AsanaAPILike` interface — polymorphic API contract for real and demo implementations
+- [x] Repo renamed to `panoptisana`, CI badge added to README
+- [x] Lint cleanup: 5 `eqeqeq` warnings fixed in `App.tsx`
 
 ## Next Immediate
 

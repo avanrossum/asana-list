@@ -4,11 +4,13 @@ import { createTray, getTray } from './tray';
 import { registerIpcHandlers, broadcastSettingsToRenderer } from './ipc-handlers';
 import { Store } from './store';
 import { AsanaAPI } from './asana-api';
+import { DemoAsanaAPI } from './demo-asana-api';
+import { DEMO_CURRENT_USER } from './demo-data';
 import { autoUpdater } from 'electron-updater';
 import { THEME_BG_COLORS, WINDOW_SIZE, SETTINGS_WINDOW_SIZE, UPDATE_DIALOG_SIZE, TIMING, DEFAULT_SETTINGS } from './constants';
 
 import type { UpdateInfo } from 'electron-updater';
-import type { ResolvedTheme, UpdateDialogInitData, PollDataPacket } from '../shared/types';
+import type { ResolvedTheme, UpdateDialogInitData, PollDataPacket, AsanaAPILike } from '../shared/types';
 
 const isDev = process.argv.includes('--dev');
 
@@ -33,7 +35,7 @@ let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 let updateDialogWindow: (BrowserWindow & { _initData?: UpdateDialogInitData }) | null = null;
 let store: Store | null = null;
-let asanaApi: AsanaAPI | null = null;
+let asanaApi: AsanaAPILike | null = null;
 
 // ══════════════════════════════════════════════════════════════════════════════
 // AUTO-UPDATER
@@ -502,14 +504,25 @@ app.whenReady().then(() => {
   const mergedSettings = { ...DEFAULT_SETTINGS, ...currentSettings };
   store.setSettings(mergedSettings);
 
-  // Initialize Asana API
-  asanaApi = new AsanaAPI({
-    store,
-    getApiKey: () => {
-      const settings = store!.getSettings();
-      return settings.apiKey ? store!.decryptApiKey(settings.apiKey) : null;
-    }
-  });
+  // Initialize Asana API (or demo substitute)
+  const isDemo = process.env.PANOPTISANA_DEMO === '1';
+
+  if (isDemo) {
+    console.log('[demo] Demo mode active — using fake Asana data');
+    store.setSettings({
+      apiKeyVerified: true,
+      currentUserId: DEMO_CURRENT_USER.gid,
+    });
+    asanaApi = new DemoAsanaAPI({ store });
+  } else {
+    asanaApi = new AsanaAPI({
+      store,
+      getApiKey: () => {
+        const settings = store!.getSettings();
+        return settings.apiKey ? store!.decryptApiKey(settings.apiKey) : null;
+      }
+    });
+  }
 
   // Register IPC handlers
   registerIpcHandlers({
@@ -528,9 +541,9 @@ app.whenReady().then(() => {
   // Register global hotkey
   registerGlobalHotkey();
 
-  // Start polling if API key is verified
+  // Start polling if API key is verified (demo mode always starts)
   const settings = store.getSettings();
-  if (settings.apiKeyVerified && settings.apiKey) {
+  if (isDemo || (settings.apiKeyVerified && settings.apiKey)) {
     asanaApi.startPolling(
       settings.pollIntervalMinutes || TIMING.DEFAULT_POLL_INTERVAL_MINUTES,
       (data: PollDataPacket) => {

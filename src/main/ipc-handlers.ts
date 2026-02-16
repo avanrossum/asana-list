@@ -3,8 +3,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 
 import type { Store } from './store';
-import type { AsanaAPI } from './asana-api';
-import type { MaskedSettings, ContextMenuItem, BrowserInfo } from '../shared/types';
+import type { MaskedSettings, ContextMenuItem, BrowserInfo, AsanaAPILike } from '../shared/types';
 
 /** Send masked settings to the main renderer so it can re-apply client-side filters */
 export function broadcastSettingsToRenderer(store: Store, getMainWindow: () => BrowserWindow | null): void {
@@ -25,7 +24,7 @@ export function broadcastSettingsToRenderer(store: Store, getMainWindow: () => B
 
 interface IpcHandlerDeps {
   store: Store;
-  asanaApi: AsanaAPI;
+  asanaApi: AsanaAPILike;
   getMainWindow: () => BrowserWindow | null;
   getSettingsWindow: () => BrowserWindow | null;
 }

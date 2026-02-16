@@ -6,7 +6,8 @@
 
 import type {
   AsanaTask, AsanaProject, AsanaUser, AsanaComment,
-  AsanaWorkspace, PollDataPacket, VerifyApiKeyResult
+  AsanaWorkspace, VerifyApiKeyResult,
+  PollCallback, PollStartedCallback
 } from '../shared/types';
 import type { Store } from './store';
 
@@ -27,9 +28,6 @@ interface AsanaResponse<T = unknown> {
 interface FetchAllSearchOptions extends RequestInit {
   maxPages?: number;
 }
-
-type PollCallback = (data: PollDataPacket) => void;
-type PollStartedCallback = () => void;
 
 export class AsanaAPI {
   private _store: Store;
