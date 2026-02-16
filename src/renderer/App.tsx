@@ -116,8 +116,8 @@ export default function App() {
       setError(null);
       if (data.tasks) setTasks(data.tasks);
       if (data.projects) setProjects(data.projects);
-      if (data.unfilteredTaskCount != null) setUnfilteredTaskCount(data.unfilteredTaskCount);
-      if (data.unfilteredProjectCount != null) setUnfilteredProjectCount(data.unfilteredProjectCount);
+      if (data.unfilteredTaskCount !== null && data.unfilteredTaskCount !== undefined) setUnfilteredTaskCount(data.unfilteredTaskCount);
+      if (data.unfilteredProjectCount !== null && data.unfilteredProjectCount !== undefined) setUnfilteredProjectCount(data.unfilteredProjectCount);
       setIsConnected(true);
     });
 
@@ -251,7 +251,7 @@ export default function App() {
 
   const handleCompleteTask = useCallback((taskGid: string) => {
     setTasks(prev => prev.filter(t => t.gid !== taskGid));
-    setUnfilteredTaskCount(prev => prev != null ? prev - 1 : prev);
+    setUnfilteredTaskCount(prev => prev !== null && prev !== undefined ? prev - 1 : prev);
   }, []);
 
   // ── Render ──────────────────────────────────────────────────
@@ -420,8 +420,8 @@ export default function App() {
               : isPolling
                 ? 'Refreshing...'
                 : activeTab === 'tasks'
-                  ? `${visibleTaskCount}${unfilteredTaskCount != null && unfilteredTaskCount !== visibleTaskCount ? ` of ${unfilteredTaskCount}` : ''} tasks`
-                  : `${visibleProjectCount}${unfilteredProjectCount != null && unfilteredProjectCount !== visibleProjectCount ? ` of ${unfilteredProjectCount}` : ''} projects`
+                  ? `${visibleTaskCount}${unfilteredTaskCount !== null && unfilteredTaskCount !== undefined && unfilteredTaskCount !== visibleTaskCount ? ` of ${unfilteredTaskCount}` : ''} tasks`
+                  : `${visibleProjectCount}${unfilteredProjectCount !== null && unfilteredProjectCount !== undefined && unfilteredProjectCount !== visibleProjectCount ? ` of ${unfilteredProjectCount}` : ''} projects`
             }
           </span>
         </div>

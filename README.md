@@ -1,5 +1,7 @@
 # Panoptisana
 
+[![CI](https://github.com/avanrossum/panoptisana/actions/workflows/ci.yml/badge.svg)](https://github.com/avanrossum/panoptisana/actions/workflows/ci.yml)
+
 A fast, focused Asana visibility tool for macOS. Lives in your menu bar, shows your tasks and projects at a glance.
 
 ## Features
