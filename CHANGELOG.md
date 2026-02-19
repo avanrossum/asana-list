@@ -21,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Meta row showing project owner name and relative "last modified" timestamp
 - Actions column reordered: Pin, Open Project, Copy URL (vertical layout matching task items)
 
+### Fixed
+- Stale pinned GIDs — pinned task/project GID arrays are now pruned when items no longer exist in live Asana data (prevents unbounded growth)
+- Replace unsafe `as string[]` type assertions with `Array.isArray()` runtime guards in `ipc-handlers.ts`
+
+### Improved
+- Extract generic `applyPinnedPartition<T>()` helper — replaces duplicated stable partition logic in task and project sort functions
+- Extract `useCopyToClipboard` / `useCopyToClipboardKeyed` hooks — replaces 11 identical copy handlers across `TaskItem.tsx` and `ProjectList.tsx`
+- Deduplicate `.project-item-actions` CSS — consolidated with identical `.task-item-actions` class
+
 ## [0.5.6] - 2026-02-17
 
 ### Changed
