@@ -58,6 +58,37 @@ export interface AsanaComment {
   type: 'comment';
 }
 
+export interface TaskDetail {
+  gid: string;
+  name: string;
+  notes: string;
+  html_notes?: string;
+  completed: boolean;
+  assignee: { gid: string; name: string } | null;
+  projects?: { gid: string; name: string }[];
+  memberships?: { project?: { gid: string }; section?: { gid: string; name: string } }[];
+  parent?: { gid: string; name: string } | null;
+  due_on: string | null;
+  due_at: string | null;
+  created_at: string;
+  modified_at: string;
+  num_subtasks?: number;
+}
+
+export interface AsanaSubtask {
+  gid: string;
+  name: string;
+  completed: boolean;
+  assignee: { gid: string; name: string } | null;
+  due_on: string | null;
+}
+
+export interface AddCommentResult {
+  success: boolean;
+  comment?: AsanaComment;
+  error?: string;
+}
+
 export interface AsanaSection {
   gid: string;
   name: string;
@@ -167,6 +198,9 @@ export interface AsanaAPILike {
   fetchInboxNotifications(tasks: AsanaTask[], currentUserId: string | null, limit: number): Promise<InboxNotification[]>;
   getProjectSections(projectGid: string): Promise<AsanaSection[]>;
   getProjectFields(projectGid: string): Promise<AsanaField[]>;
+  getTaskDetail(taskGid: string): Promise<TaskDetail>;
+  getSubtasks(taskGid: string): Promise<AsanaSubtask[]>;
+  addComment(taskGid: string, text: string): Promise<AsanaComment>;
   completeTask(taskGid: string): Promise<{ data: unknown }>;
   startPolling(interval: number, onUpdate: PollCallback, onPollStarted?: PollStartedCallback): void;
   stopPolling(): void;
@@ -236,6 +270,9 @@ export interface IpcInvokeChannelMap {
   'asana:get-task-comments':  { args: [taskGid: string];                     return: AsanaComment[] };
   'asana:get-project-sections': { args: [projectGid: string];               return: AsanaSection[] };
   'asana:get-project-fields': { args: [projectGid: string];                 return: AsanaField[] };
+  'asana:get-task-detail':    { args: [taskGid: string];                     return: TaskDetail };
+  'asana:get-subtasks':       { args: [taskGid: string];                     return: AsanaSubtask[] };
+  'asana:add-comment':        { args: [taskGid: string, text: string];       return: AddCommentResult };
   'asana:complete-task':      { args: [taskGid: string];                     return: CompleteTaskResult };
   'asana:refresh':            { args: [];                                    return: void };
 
@@ -297,6 +334,9 @@ export interface ElectronAPI {
   getTaskComments(taskGid: string): Promise<AsanaComment[]>;
   getProjectSections(projectGid: string): Promise<AsanaSection[]>;
   getProjectFields(projectGid: string): Promise<AsanaField[]>;
+  getTaskDetail(taskGid: string): Promise<TaskDetail>;
+  getSubtasks(taskGid: string): Promise<AsanaSubtask[]>;
+  addComment(taskGid: string, text: string): Promise<AddCommentResult>;
   completeTask(taskGid: string): Promise<CompleteTaskResult>;
   refreshData(): Promise<void>;
 

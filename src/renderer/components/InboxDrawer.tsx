@@ -11,6 +11,7 @@ interface InboxDrawerProps {
   onClose: () => void;
   slideDirection: 'left' | 'right';
   currentUserId: string | null;
+  onOpenTaskDetail: (taskGid: string) => void;
 }
 
 type ArchiveAllState = 'idle' | 'confirming';
@@ -94,7 +95,7 @@ function formatSticker(stickerName: string): string {
 
 // ── Component ───────────────────────────────────────────────────
 
-export default function InboxDrawer({ isOpen, onClose, slideDirection, currentUserId }: InboxDrawerProps) {
+export default function InboxDrawer({ isOpen, onClose, slideDirection, currentUserId, onOpenTaskDetail }: InboxDrawerProps) {
   const [notifications, setNotifications] = useState<InboxNotification[]>([]);
   const [archivedGids, setArchivedGids] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -244,8 +245,8 @@ export default function InboxDrawer({ isOpen, onClose, slideDirection, currentUs
                   </div>
                   <button
                     className="inbox-notification-task"
-                    onClick={() => handleOpenTask(n.taskGid)}
-                    title="Open task in Asana"
+                    onClick={() => onOpenTaskDetail(n.taskGid)}
+                    title="View task details"
                   >
                     {n.taskName}
                   </button>
@@ -263,13 +264,22 @@ export default function InboxDrawer({ isOpen, onClose, slideDirection, currentUs
                     </span>
                   )}
                 </div>
-                <button
-                  className="inbox-notification-archive"
-                  onClick={() => handleArchive(n.storyGid)}
-                  title="Archive"
-                >
-                  <Icon path={ICON_PATHS.archive} size={14} />
-                </button>
+                <div className="inbox-notification-actions">
+                  <button
+                    className="inbox-notification-open-asana"
+                    onClick={() => handleOpenTask(n.taskGid)}
+                    title="Open in Asana"
+                  >
+                    <Icon path={ICON_PATHS.openExternal} size={14} />
+                  </button>
+                  <button
+                    className="inbox-notification-archive"
+                    onClick={() => handleArchive(n.storyGid)}
+                    title="Archive"
+                  >
+                    <Icon path={ICON_PATHS.archive} size={14} />
+                  </button>
+                </div>
               </div>
             ))
           )}

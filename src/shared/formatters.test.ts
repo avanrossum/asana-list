@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatDueDate, formatRelativeTime, parseCommentSegments } from './formatters';
+import { formatDueDate, formatRelativeTime, parseCommentSegments, replaceMentionsWithLinks } from './formatters';
 
 import type { AsanaUser } from './types';
 
@@ -174,5 +174,61 @@ describe('parseCommentSegments', () => {
 
     const profileSegment = result!.find(s => s.type === 'profile');
     expect(profileSegment!.value).toBe('Profile');
+  });
+});
+
+// ── replaceMentionsWithLinks ─────────────────────────────────
+
+describe('replaceMentionsWithLinks', () => {
+  const users: AsanaUser[] = [
+    { gid: '12345', name: 'Alice Smith' },
+    { gid: '67890', name: 'Bob Jones' },
+    { gid: '11111', name: 'Alice' },
+  ];
+
+  it('replaces a single @mention with a profile URL', () => {
+    const result = replaceMentionsWithLinks('Thanks @Alice Smith for the help', users);
+    expect(result).toBe('Thanks https://app.asana.com/0/0/profile/12345 for the help');
+  });
+
+  it('replaces multiple @mentions', () => {
+    const result = replaceMentionsWithLinks('@Alice Smith and @Bob Jones', users);
+    expect(result).toBe('https://app.asana.com/0/0/profile/12345 and https://app.asana.com/0/0/profile/67890');
+  });
+
+  it('leaves unknown @mentions as-is', () => {
+    const result = replaceMentionsWithLinks('@Unknown Person hello', users);
+    expect(result).toBe('@Unknown Person hello');
+  });
+
+  it('is case-insensitive', () => {
+    const result = replaceMentionsWithLinks('@alice smith', users);
+    expect(result).toBe('https://app.asana.com/0/0/profile/12345');
+  });
+
+  it('returns text unchanged when no @mentions', () => {
+    const result = replaceMentionsWithLinks('No mentions here', users);
+    expect(result).toBe('No mentions here');
+  });
+
+  it('returns text unchanged with empty users array', () => {
+    const result = replaceMentionsWithLinks('@Alice Smith', []);
+    expect(result).toBe('@Alice Smith');
+  });
+
+  it('handles @mention at end of string', () => {
+    const result = replaceMentionsWithLinks('Thanks @Bob Jones', users);
+    expect(result).toBe('Thanks https://app.asana.com/0/0/profile/67890');
+  });
+
+  it('handles @mention at start of string', () => {
+    const result = replaceMentionsWithLinks('@Alice Smith is great', users);
+    expect(result).toBe('https://app.asana.com/0/0/profile/12345 is great');
+  });
+
+  it('prefers longer name matches (greedy)', () => {
+    // "Alice Smith" should match before "Alice" because it's sorted by length descending
+    const result = replaceMentionsWithLinks('@Alice Smith', users);
+    expect(result).toBe('https://app.asana.com/0/0/profile/12345');
   });
 });

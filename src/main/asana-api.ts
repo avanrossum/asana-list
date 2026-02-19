@@ -6,7 +6,7 @@
 
 import type {
   AsanaTask, AsanaProject, AsanaUser, AsanaComment, AsanaStory, AsanaSection, AsanaField,
-  AsanaWorkspace, VerifyApiKeyResult, InboxNotification,
+  AsanaWorkspace, VerifyApiKeyResult, InboxNotification, TaskDetail, AsanaSubtask,
   PollCallback, PollStartedCallback
 } from '../shared/types';
 import type { Store } from './store';
@@ -219,6 +219,26 @@ export class AsanaAPI {
     const task = Array.isArray(result.data) ? result.data[0] : null;
     if (!task || !task.custom_fields) return [];
     return task.custom_fields.map(cf => ({ gid: cf.gid, name: cf.name, type: cf.type }));
+  }
+
+  async getTaskDetail(taskGid: string): Promise<TaskDetail> {
+    const fields = 'name,notes,html_notes,completed,assignee.name,assignee.gid,projects.name,projects.gid,memberships.project.gid,memberships.section.gid,memberships.section.name,parent.name,parent.gid,due_on,due_at,created_at,modified_at,num_subtasks';
+    const result = await this._fetch<TaskDetail>(`/tasks/${taskGid}?opt_fields=${fields}`);
+    return result.data;
+  }
+
+  async getSubtasks(taskGid: string): Promise<AsanaSubtask[]> {
+    const fields = 'name,completed,assignee.name,assignee.gid,due_on';
+    return this._fetchAll<AsanaSubtask>(`/tasks/${taskGid}/subtasks?opt_fields=${fields}`);
+  }
+
+  async addComment(taskGid: string, text: string): Promise<AsanaComment> {
+    const result = await this._fetch<AsanaComment>(`/tasks/${taskGid}/stories`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: { text } })
+    });
+    return result.data;
   }
 
   async getTaskComments(taskGid: string): Promise<AsanaComment[]> {

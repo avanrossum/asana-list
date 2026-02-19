@@ -11,17 +11,17 @@ interface TaskListProps {
   sortBy: SortBy;
   selectedProjectGid: string;
   seenTimestamps: Record<string, string>;
-  onMarkSeen: (taskGid: string, modifiedAt: string) => void;
   onComplete: (taskGid: string) => void;
   currentUserId: string | null;
   cachedUsers: AsanaUser[];
   pinnedGids: string[];
   onTogglePin: (type: 'task' | 'project', gid: string) => void;
+  onOpenDetail: (taskGid: string) => void;
 }
 
 // ── Component ───────────────────────────────────────────────────
 
-export default function TaskList({ tasks, searchQuery, sortBy, selectedProjectGid, seenTimestamps, onMarkSeen, onComplete, currentUserId, cachedUsers, pinnedGids, onTogglePin }: TaskListProps) {
+export default function TaskList({ tasks, searchQuery, sortBy, selectedProjectGid, seenTimestamps, onComplete, currentUserId, cachedUsers, pinnedGids, onTogglePin, onOpenDetail }: TaskListProps) {
   const filteredAndSorted = useMemo(() =>
     filterAndSortTasks(tasks, { searchQuery, sortBy, selectedProjectGid, pinnedGids }),
     [tasks, searchQuery, sortBy, selectedProjectGid, pinnedGids]
@@ -60,12 +60,12 @@ export default function TaskList({ tasks, searchQuery, sortBy, selectedProjectGi
           key={task.gid}
           task={task}
           lastSeenModified={seenTimestamps[task.gid]}
-          onMarkSeen={onMarkSeen}
           onComplete={onComplete}
           currentUserId={currentUserId}
           cachedUsers={cachedUsers}
           isPinned={pinnedSet.has(task.gid)}
           onTogglePin={onTogglePin}
+          onOpenDetail={onOpenDetail}
         />
       ))}
     </>

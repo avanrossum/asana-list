@@ -1,115 +1,28 @@
-import { useState, useCallback, type ReactNode } from 'react';
+import { useState, useCallback } from 'react';
 import Icon from './Icon';
 import { ICON_PATHS } from '../icons';
-import { formatDueDate, formatRelativeTime, parseCommentSegments } from '../../shared/formatters';
+import { formatDueDate, formatRelativeTime, buildProjectMemberships, type ProjectMembership } from '../../shared/formatters';
 import { useCopyToClipboard, useCopyToClipboardKeyed } from '../../shared/useCopyToClipboard';
-import type { AsanaTask, AsanaUser, AsanaComment, CompleteTaskResult } from '../../shared/types';
+import type { AsanaTask, AsanaUser, CompleteTaskResult } from '../../shared/types';
 
 // ── Props ───────────────────────────────────────────────────────
 
 interface TaskItemProps {
   task: AsanaTask;
   lastSeenModified: string | undefined;
-  onMarkSeen: (taskGid: string, modifiedAt: string) => void;
   onComplete: (taskGid: string) => void;
   currentUserId: string | null;
   cachedUsers: AsanaUser[];
   isPinned: boolean;
   onTogglePin: (type: 'task' | 'project', gid: string) => void;
+  onOpenDetail: (taskGid: string) => void;
 }
 
 type CompleteState = 'idle' | 'confirming' | 'completing';
 
-// ── Helpers ─────────────────────────────────────────────────────
-
-interface ProjectMembership {
-  projectGid: string;
-  projectName: string;
-  sectionGid?: string;
-  sectionName?: string;
-}
-
-/** Build enriched project list by joining projects with memberships. */
-function buildProjectMemberships(task: AsanaTask): ProjectMembership[] {
-  const sectionMap = new Map<string, { gid?: string; name?: string }>();
-  if (task.memberships) {
-    for (const m of task.memberships) {
-      if (m.project?.gid && m.section) {
-        sectionMap.set(m.project.gid, { gid: m.section.gid, name: m.section.name });
-      }
-    }
-  }
-  return (task.projects || []).map(p => {
-    const sec = sectionMap.get(p.gid);
-    return {
-      projectGid: p.gid,
-      projectName: p.name,
-      sectionGid: sec?.gid,
-      sectionName: sec?.name,
-    };
-  });
-}
-
-// ── Comment Rendering ───────────────────────────────────────────
-
-/**
- * Render parsed comment segments as React elements.
- * Uses parseCommentSegments (pure logic) and wraps results in JSX.
- */
-function renderCommentText(text: string | null | undefined, users: AsanaUser[]): ReactNode {
-  const segments = parseCommentSegments(text, users);
-  if (!segments) return null;
-
-  return segments.map((seg, i) => {
-    if (seg.type === 'profile') {
-      return (
-        <a
-          key={i}
-          className="comment-link comment-profile-link"
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            window.electronAPI.openUrl(seg.url!);
-          }}
-          title="Open profile in Asana"
-        >
-          [{seg.value}]
-        </a>
-      );
-    } else if (seg.type === 'url') {
-      return (
-        <a
-          key={i}
-          className="comment-link"
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            window.electronAPI.openUrl(seg.url!);
-          }}
-          title={seg.url}
-        >
-          {seg.value}
-        </a>
-      );
-    } else {
-      return seg.value;
-    }
-  });
-}
-
 // ── Component ───────────────────────────────────────────────────
 
-/**
- * Comment highlighting logic:
- * - We track a "lastSeenModified" timestamp per task (stored in the main process store).
- * - If the task's modified_at is newer than lastSeenModified, show highlight.
- * - When the user expands comments, we update lastSeenModified to current modified_at.
- * - If the last comment was authored by the "I am" user, suppress the highlight.
- */
-export default function TaskItem({ task, lastSeenModified, onMarkSeen, onComplete, currentUserId, cachedUsers, isPinned, onTogglePin }: TaskItemProps) {
-  const [commentsExpanded, setCommentsExpanded] = useState(false);
-  const [comments, setComments] = useState<AsanaComment[] | null>(null);
-  const [loadingComments, setLoadingComments] = useState(false);
+export default function TaskItem({ task, lastSeenModified, onComplete, isPinned, onTogglePin, onOpenDetail }: TaskItemProps) {
   const [copiedGid, copyGid] = useCopyToClipboard();
   const [copiedName, copyName] = useCopyToClipboard();
   const [copiedUrl, copyUrl] = useCopyToClipboard();
@@ -117,46 +30,17 @@ export default function TaskItem({ task, lastSeenModified, onMarkSeen, onComplet
   const [copiedProjectGid, copyProjectGid] = useCopyToClipboardKeyed<string>();
   const [copiedSectionGid, copySectionGid] = useCopyToClipboardKeyed<string>();
   const [projectsExpanded, setProjectsExpanded] = useState(false);
-  const [suppressHighlight, setSuppressHighlight] = useState(false);
   const [completeState, setCompleteState] = useState<CompleteState>('idle');
 
-  // Determine if task has been modified since last comment view
+  // Determine if task has been modified since last seen
   const taskModified = task.modified_at ? new Date(task.modified_at).getTime() : 0;
   const seenTime = lastSeenModified ? new Date(lastSeenModified).getTime() : 0;
-  const hasNewActivity = lastSeenModified !== undefined && taskModified > seenTime && !suppressHighlight;
-
-  const handleToggleComments = useCallback(async () => {
-    if (!commentsExpanded) {
-      setLoadingComments(true);
-      try {
-        const result = await window.electronAPI.getTaskComments(task.gid);
-        setComments(result);
-
-        // Check if the last comment is from the current user
-        const lastComment = result.length > 0 ? result[result.length - 1] : null;
-        const isMyComment = lastComment && currentUserId &&
-          lastComment.created_by?.gid === currentUserId;
-
-        if (isMyComment) {
-          setSuppressHighlight(true);
-        }
-
-        // Mark as seen with current modified_at
-        onMarkSeen(task.gid, task.modified_at);
-      } catch (err) {
-        console.error('Failed to load comments:', err);
-        setComments([]);
-      }
-      setLoadingComments(false);
-    }
-    setCommentsExpanded(!commentsExpanded);
-  }, [commentsExpanded, task.gid, task.modified_at, onMarkSeen, currentUserId]);
+  const hasNewActivity = lastSeenModified !== undefined && taskModified > seenTime;
 
   const handleOpenTask = useCallback(() => {
     const url = `https://app.asana.com/0/0/${task.gid}/f`;
     window.electronAPI.openUrl(url);
   }, [task.gid]);
-
 
   const handleComplete = useCallback(async () => {
     if (completeState === 'idle') {
@@ -254,7 +138,7 @@ export default function TaskItem({ task, lastSeenModified, onMarkSeen, onComplet
 
   return (
     <div className={`task-item ${isPinned ? 'pinned' : ''} ${hasNewActivity ? 'highlighted' : ''}`} onContextMenu={handleContextMenu}>
-      <div className="task-item-header" onClick={handleToggleComments}>
+      <div className="task-item-header" onClick={() => onOpenDetail(task.gid)}>
         <div className="task-item-content">
           {/* Task name row with copy button */}
           <div className="task-item-name-row">
@@ -340,6 +224,14 @@ export default function TaskItem({ task, lastSeenModified, onMarkSeen, onComplet
             <Icon path={ICON_PATHS.pin} size={12} />
           </button>
           <button
+            className="task-btn view"
+            onClick={() => onOpenDetail(task.gid)}
+            title="View task details"
+          >
+            <Icon path={ICON_PATHS.eye} size={12} />
+            <span>View</span>
+          </button>
+          <button
             className={`task-btn ${completeState === 'confirming' ? 'confirm' : 'complete'}`}
             onClick={handleComplete}
             disabled={completeState === 'completing'}
@@ -354,39 +246,6 @@ export default function TaskItem({ task, lastSeenModified, onMarkSeen, onComplet
           </button>
         </div>
       </div>
-
-      {/* Comment toggle */}
-      <button className="comment-toggle" onClick={handleToggleComments}>
-        <span className={`comment-toggle-icon ${commentsExpanded ? 'expanded' : ''}`}>
-          <Icon path={ICON_PATHS.chevronRight} size={12} />
-        </span>
-        <Icon path={ICON_PATHS.comment} size={12} />
-        <span>Comments</span>
-        {hasNewActivity && <span className="comment-badge">New</span>}
-      </button>
-
-      {/* Comments section */}
-      {commentsExpanded && (
-        <div className="comments-section">
-          {loadingComments ? (
-            <div className="comments-loading">Loading comments...</div>
-          ) : comments && comments.length > 0 ? (
-            comments.slice(-5).map((comment, i) => (
-              <div key={comment.gid || i} className="comment-item">
-                <span className="comment-author">{comment.created_by?.name || 'Unknown'}</span>
-                <span className="comment-date">
-                  {new Date(comment.created_at).toLocaleDateString('en-US', {
-                    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
-                  })}
-                </span>
-                <div className="comment-text">{renderCommentText(comment.text, cachedUsers)}</div>
-              </div>
-            ))
-          ) : (
-            <div className="comments-loading">No comments yet.</div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

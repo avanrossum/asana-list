@@ -184,6 +184,38 @@ export function registerIpcHandlers({ store, asanaApi, getMainWindow, getSetting
     }
   });
 
+  ipcMain.handle('asana:get-task-detail', async (_, taskGid: string) => {
+    if (!taskGid || typeof taskGid !== 'string') throw new Error('Invalid task GID');
+    try {
+      return await asanaApi.getTaskDetail(taskGid);
+    } catch (err) {
+      console.error('[ipc] Failed to fetch task detail:', (err as Error).message);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('asana:get-subtasks', async (_, taskGid: string) => {
+    if (!taskGid || typeof taskGid !== 'string') return [];
+    try {
+      return await asanaApi.getSubtasks(taskGid);
+    } catch (err) {
+      console.error('[ipc] Failed to fetch subtasks:', (err as Error).message);
+      return [];
+    }
+  });
+
+  ipcMain.handle('asana:add-comment', async (_, taskGid: string, text: string) => {
+    if (!taskGid || typeof taskGid !== 'string') return { success: false, error: 'Invalid task GID' };
+    if (!text || typeof text !== 'string') return { success: false, error: 'Empty comment text' };
+    try {
+      const comment = await asanaApi.addComment(taskGid, text);
+      return { success: true, comment };
+    } catch (err) {
+      console.error('[ipc] Failed to add comment:', (err as Error).message);
+      return { success: false, error: (err as Error).message };
+    }
+  });
+
   ipcMain.handle('asana:complete-task', async (_, taskGid: string) => {
     if (!taskGid || typeof taskGid !== 'string') return { success: false };
     try {

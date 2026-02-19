@@ -4,7 +4,7 @@
 
 Open-source Asana task and project visibility tool for macOS. Displays a searchable list of incomplete tasks and active projects with comment tracking and auto-updates.
 
-## Current Version: 0.5.9
+## Current Version: 0.5.10
 
 ### Core Features (v0.1.0)
 - [x] Searchable task list with sorting
@@ -142,6 +142,20 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [x] `lastInboxOpenedAt` SQLite timestamp — persists across sessions, clears dot optimistically when inbox opens
 - [x] Demo mode inbox dot — always shows dot for screenshots/video
 
+### v0.5.10 Additions
+- [x] Task detail panel — full-width overlay (z-index 200) replacing inline comment toggling, with description, all subtasks, all comments, and project memberships
+- [x] Navigation stack (`taskDetailStack`) — drill into subtasks/parents with back button to return
+- [x] Comment composer with @mention dropdown — `@` triggers user search, mentions converted to Asana profile URLs on POST
+- [x] "View" button on task items — opens detail panel (replaces comment toggle)
+- [x] Inbox task clicks open detail panel instead of external browser
+- [x] "Open in Asana" icon button on each inbox notification
+- [x] 3 new API endpoints: `getTaskDetail`, `getSubtasks`, `addComment`
+- [x] `CommentRenderer` extracted as shared component
+- [x] `CommentComposer` component with @mention support
+- [x] `replaceMentionsWithLinks()` formatter with 9 tests
+- [x] `buildProjectMemberships()` moved to shared `formatters.ts`
+- [x] Removed inline comment toggle, comment-related state, and associated CSS
+
 ## Up Next
 
 ### Bugs & Fixes
@@ -160,14 +174,14 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 
 ## Feature Roadmap
 
-### Task Detail View (timing TBD — pre or post v1)
-- [ ] Slide-out task detail panel — a detail view that slides out from the task list, showing full task information in a more spacious layout
-- [ ] Full comment history — list view shows only the latest comment; detail view shows all comments with scrolling
-- [ ] Subtask and parent task navigation — display subtasks on the detail view with clickable links, and link back to parent task if the task is a subtask
+### Task Detail View (v0.5.10)
+- [x] Slide-out task detail panel — full-width overlay showing full task information in a spacious layout
+- [x] Full comment history — detail view shows all comments with scrolling
+- [x] Subtask and parent task navigation — subtasks displayed with clickable links, parent task link for subtasks, navigation stack for drill-in/drill-out
 - [ ] Quick-comment buttons — preset comment templates for common responses (e.g. "Meeting needed to discuss", "Blocked — waiting on dependency", "In progress — will update by EOD") posted directly to the task via the Asana API
 
 ### Comments & Activity
-- [ ] Post a comment to a task from within the app
+- [x] Post a comment to a task from within the app (v0.5.10 — comment composer with @mention support in task detail panel)
 - [ ] Comment change detection — track comment count + latest `created_at` timestamp per task instead of `modified_at`. More accurate new-comment highlighting without false positives from non-comment changes. Depends on comment caching in SQLite
 - [ ] "Sort by last comment" sort option for task list
 - [ ] Notification for new comments
@@ -253,7 +267,7 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [ ] Structured logging (replace bare console.log/warn/error)
 - [ ] Error boundary components for each renderer — crash in one component takes down entire window
 - [x] Performance: memoize filtered/sorted task and project lists (useMemo) — done in v0.5.1
-- [ ] Fix `suppressHighlight` in `TaskItem.tsx` — once set to `true` it never resets; new comments from other users won't trigger highlight until remount
+- [x] ~~Fix `suppressHighlight` in `TaskItem.tsx`~~ — removed in v0.5.10 (comment toggle replaced by task detail panel, highlight logic simplified)
 - [ ] Clean up `setInterval` for auto-update checks on app quit
 - [ ] Fix `useThemeListener` potential listener leak — unstable API ref could cause listener attach/detach churn
 - [ ] Remove unused Vite alias `@shared-styles` from `vite.config.ts`

@@ -7,7 +7,7 @@
 import type { Store } from './store';
 import type {
   AsanaUser, AsanaComment, AsanaStory, AsanaSection, AsanaField, AsanaWorkspace,
-  AsanaTask, VerifyApiKeyResult, InboxNotification,
+  AsanaTask, AsanaSubtask, TaskDetail, VerifyApiKeyResult, InboxNotification,
   PollCallback, PollStartedCallback, AsanaAPILike
 } from '../shared/types';
 import { DEMO_WORKSPACE, DEMO_CURRENT_USER, getDemoUsers, getDemoProjects, getDemoTasks, getDemoInboxNotifications } from './demo-data';
@@ -37,6 +37,64 @@ export class DemoAsanaAPI implements AsanaAPILike {
 
   async getUsers(_workspaceGid: string): Promise<AsanaUser[]> {
     return getDemoUsers();
+  }
+
+  async getTaskDetail(taskGid: string): Promise<TaskDetail> {
+    // Find the demo task or return a generic one
+    const tasks = getDemoTasks();
+    const task = tasks.find(t => t.gid === taskGid);
+    return {
+      gid: task?.gid || taskGid,
+      name: task?.name || 'Demo Task',
+      notes: 'This is a demo task description.\n\nThe task detail panel shows the full description, subtasks, and comment history. You can navigate between subtasks and parent tasks, and post new comments with @mentions.\n\nKey features:\n- Full task description\n- Subtask navigation\n- Comment history with profile link resolution\n- Comment composer with @mention support',
+      html_notes: undefined,
+      completed: task?.completed || false,
+      assignee: task?.assignee || null,
+      projects: task?.projects,
+      memberships: task?.memberships,
+      parent: task?.parent,
+      due_on: task?.due_on || null,
+      due_at: task?.due_at || null,
+      created_at: task?.created_at || new Date().toISOString(),
+      modified_at: task?.modified_at || new Date().toISOString(),
+      num_subtasks: task?.num_subtasks,
+    };
+  }
+
+  async getSubtasks(_taskGid: string): Promise<AsanaSubtask[]> {
+    return [
+      {
+        gid: '6000000000000001',
+        name: 'Research existing solutions',
+        completed: true,
+        assignee: { gid: '2000000000000002', name: 'Jordan Lee' },
+        due_on: '2026-02-18',
+      },
+      {
+        gid: '6000000000000002',
+        name: 'Draft implementation plan',
+        completed: false,
+        assignee: { gid: DEMO_CURRENT_USER.gid, name: DEMO_CURRENT_USER.name },
+        due_on: '2026-02-20',
+      },
+      {
+        gid: '6000000000000003',
+        name: 'Write unit tests',
+        completed: false,
+        assignee: null,
+        due_on: null,
+      },
+    ];
+  }
+
+  async addComment(_taskGid: string, text: string): Promise<AsanaComment> {
+    return {
+      gid: `9000000000${Date.now()}`,
+      text,
+      created_at: new Date().toISOString(),
+      created_by: { gid: DEMO_CURRENT_USER.gid, name: DEMO_CURRENT_USER.name },
+      type: 'comment',
+    };
   }
 
   async getTaskComments(_taskGid: string): Promise<AsanaComment[]> {

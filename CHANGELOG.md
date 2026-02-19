@@ -5,6 +5,28 @@ All notable changes to Panoptisana will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.10] - 2026-02-19
+
+### Added
+- Task detail panel — full-width overlay replacing inline comment toggling, with description, subtasks, all comments, and project memberships
+- Subtask and parent task navigation — click subtasks to drill in, "subtask of" link to navigate to parent, back button to return
+- Comment composer with @mention support — type `@` to trigger a user dropdown, mentions converted to Asana profile links on submit
+- "View" button on task items — opens the detail panel (replaces the old comment toggle)
+- Inbox task clicks now open the task detail panel instead of opening Asana in a browser
+- "Open in Asana" button on each inbox notification — dedicated external link icon for opening in browser/Asana app
+- 3 new API endpoints: `getTaskDetail` (task with notes field), `getSubtasks`, `addComment` (POST story)
+- `CommentRenderer` component — extracted from TaskItem for reuse in the detail panel
+- `CommentComposer` component — textarea with @mention dropdown and send button
+- `replaceMentionsWithLinks()` formatter — converts `@Display Name` to Asana profile URLs before posting
+- `buildProjectMemberships()` moved to shared `formatters.ts` for reuse across TaskItem and TaskDetailPanel
+- 9 new tests for `replaceMentionsWithLinks()` (single/multiple mentions, case-insensitive, unknown names, edge positions)
+- Demo mode: task detail returns lorem ipsum description, 2-3 demo subtasks, fabricated comment on submit
+
+### Removed
+- Inline comment toggle on task items — replaced by the task detail panel
+- Comment-related state in TaskItem (`commentsExpanded`, `comments`, `loadingComments`, `suppressHighlight`)
+- `.comment-toggle`, `.comment-badge`, `.comments-section` CSS classes
+
 ## [0.5.9] - 2026-02-19
 
 ### Added

@@ -4,7 +4,7 @@
 // Extracted from components for testability.
 // ══════════════════════════════════════════════════════════════════════════════
 
-import type { AsanaUser } from './types';
+import type { AsanaUser, AsanaTask } from './types';
 
 interface DueDateResult {
   text: string;
@@ -137,4 +137,56 @@ export function parseCommentSegments(text: string | null | undefined, users: Asa
   }
 
   return segments;
+}
+
+/**
+ * Replace @mentions in comment text with Asana profile link URLs.
+ * Converts "@Display Name" patterns into "https://app.asana.com/0/0/profile/{userGid}".
+ * Unknown @mentions are left as-is.
+ */
+export function replaceMentionsWithLinks(text: string, users: AsanaUser[]): string {
+  if (!text || users.length === 0) return text;
+
+  // Build name → user map (case-insensitive), sorted by name length descending for greedy matching
+  const sortedUsers = [...users].sort((a, b) => b.name.length - a.name.length);
+
+  let result = text;
+  for (const user of sortedUsers) {
+    // Escape regex special characters in user name
+    const escaped = user.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`@${escaped}(?![\\w])`, 'gi');
+    result = result.replace(pattern, `https://app.asana.com/0/0/profile/${user.gid}`);
+  }
+
+  return result;
+}
+
+// ── Project Membership Helpers ──────────────────────────────────────────────
+
+export interface ProjectMembership {
+  projectGid: string;
+  projectName: string;
+  sectionGid?: string;
+  sectionName?: string;
+}
+
+/** Build enriched project list by joining task.projects with task.memberships. */
+export function buildProjectMemberships(task: AsanaTask): ProjectMembership[] {
+  const sectionMap = new Map<string, { gid?: string; name?: string }>();
+  if (task.memberships) {
+    for (const m of task.memberships) {
+      if (m.project?.gid && m.section) {
+        sectionMap.set(m.project.gid, { gid: m.section.gid, name: m.section.name });
+      }
+    }
+  }
+  return (task.projects || []).map(p => {
+    const sec = sectionMap.get(p.gid);
+    return {
+      projectGid: p.gid,
+      projectName: p.name,
+      sectionGid: sec?.gid,
+      sectionName: sec?.name,
+    };
+  });
 }

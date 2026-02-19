@@ -14,6 +14,9 @@ const electronAPI: ElectronAPI = {
   getTaskComments: (taskGid) => ipcRenderer.invoke('asana:get-task-comments', taskGid),
   getProjectSections: (projectGid) => ipcRenderer.invoke('asana:get-project-sections', projectGid),
   getProjectFields: (projectGid) => ipcRenderer.invoke('asana:get-project-fields', projectGid),
+  getTaskDetail: (taskGid) => ipcRenderer.invoke('asana:get-task-detail', taskGid),
+  getSubtasks: (taskGid) => ipcRenderer.invoke('asana:get-subtasks', taskGid),
+  addComment: (taskGid, text) => ipcRenderer.invoke('asana:add-comment', taskGid, text),
   completeTask: (taskGid) => ipcRenderer.invoke('asana:complete-task', taskGid),
   refreshData: () => ipcRenderer.invoke('asana:refresh'),
 

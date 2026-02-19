@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import TaskList from './components/TaskList';
 import ProjectList from './components/ProjectList';
 import InboxDrawer from './components/InboxDrawer';
+import TaskDetailPanel from './components/TaskDetailPanel';
 import Icon from './components/Icon';
 import { ICON_PATHS } from './icons';
 import { applyTheme } from '../shared/applyTheme';
@@ -74,6 +75,7 @@ export default function App() {
   const [inboxOpen, setInboxOpen] = useState(false);
   const [inboxSlideDirection, setInboxSlideDirection] = useState<'left' | 'right'>('right');
   const [hasNewInboxActivity, setHasNewInboxActivity] = useState(false);
+  const [taskDetailStack, setTaskDetailStack] = useState<string[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // ── Init ────────────────────────────────────────────────────
@@ -181,10 +183,18 @@ export default function App() {
           });
         }
       }
+      // Escape: close task detail panel first, then inbox
+      if (e.key === 'Escape') {
+        if (taskDetailStack.length > 0) {
+          setTaskDetailStack(prev => prev.length > 1 ? prev.slice(0, -1) : []);
+        } else if (inboxOpen) {
+          setInboxOpen(false);
+        }
+      }
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [inboxOpen]);
+  }, [inboxOpen, taskDetailStack]);
 
   // ── Derived Data ───────────────────────────────────────────
 
@@ -290,11 +300,6 @@ export default function App() {
     }
   }, [isPolling]);
 
-  const handleMarkSeen = useCallback(async (taskGid: string, modifiedAt: string) => {
-    await window.electronAPI.setSeenTimestamp(taskGid, modifiedAt);
-    setSeenTimestamps(prev => ({ ...prev, [taskGid]: modifiedAt }));
-  }, []);
-
   const handleCompleteTask = useCallback((taskGid: string) => {
     setTasks(prev => prev.filter(t => t.gid !== taskGid));
     setUnfilteredTaskCount(prev => prev !== null && prev !== undefined ? prev - 1 : prev);
@@ -324,6 +329,25 @@ export default function App() {
 
   const handleCloseInbox = useCallback(() => {
     setInboxOpen(false);
+  }, []);
+
+  const handleOpenTaskDetail = useCallback((taskGid: string) => {
+    setTaskDetailStack([taskGid]);
+    setInboxOpen(false);
+    // Mark the task as seen
+    const task = tasks.find(t => t.gid === taskGid);
+    if (task?.modified_at) {
+      window.electronAPI.setSeenTimestamp(taskGid, task.modified_at);
+      setSeenTimestamps(prev => ({ ...prev, [taskGid]: task.modified_at }));
+    }
+  }, [tasks]);
+
+  const handleCloseTaskDetail = useCallback(() => {
+    setTaskDetailStack(prev => prev.length > 1 ? prev.slice(0, -1) : []);
+  }, []);
+
+  const handleNavigateToTask = useCallback((taskGid: string) => {
+    setTaskDetailStack(prev => [...prev, taskGid]);
   }, []);
 
   // ── Render ──────────────────────────────────────────────────
@@ -471,12 +495,12 @@ export default function App() {
             sortBy={sortBy}
             selectedProjectGid={selectedProjectGid}
             seenTimestamps={seenTimestamps}
-            onMarkSeen={handleMarkSeen}
             onComplete={handleCompleteTask}
             currentUserId={currentUserId}
             cachedUsers={cachedUsers}
             pinnedGids={filterSettings.pinnedTaskGids}
             onTogglePin={handleTogglePin}
+            onOpenDetail={handleOpenTaskDetail}
           />
         ) : (
           <ProjectList
@@ -514,7 +538,19 @@ export default function App() {
         onClose={handleCloseInbox}
         slideDirection={inboxSlideDirection}
         currentUserId={currentUserId}
+        onOpenTaskDetail={handleOpenTaskDetail}
       />
+
+      {/* Task Detail Panel */}
+      {taskDetailStack.length > 0 && (
+        <TaskDetailPanel
+          taskGid={taskDetailStack[taskDetailStack.length - 1]}
+          cachedUsers={cachedUsers}
+          onClose={handleCloseTaskDetail}
+          onNavigateToTask={handleNavigateToTask}
+          onComplete={handleCompleteTask}
+        />
+      )}
     </div>
   );
 }
