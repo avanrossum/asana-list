@@ -182,6 +182,61 @@ describe('filterAndSortTasks', () => {
     filterAndSortTasks(tasks, { sortBy: 'name' });
     expect(tasks.map(t => t.gid)).toEqual(original.map(t => t.gid));
   });
+
+  // ── Pinned tasks ─────────────────────────────────────────
+
+  it('floats pinned tasks to the top', () => {
+    const result = filterAndSortTasks(makeTasks(), {
+      sortBy: 'name',
+      pinnedGids: ['4']
+    });
+    expect(result[0].gid).toBe('4');
+  });
+
+  it('preserves sort order among pinned tasks', () => {
+    const result = filterAndSortTasks(makeTasks(), {
+      sortBy: 'name',
+      pinnedGids: ['3', '1']  // Write tests, Fix login bug — alphabetically: Fix, Write
+    });
+    expect(result[0].gid).toBe('1'); // Fix login bug
+    expect(result[1].gid).toBe('3'); // Write tests
+  });
+
+  it('preserves sort order among unpinned tasks', () => {
+    const result = filterAndSortTasks(makeTasks(), {
+      sortBy: 'name',
+      pinnedGids: ['3']
+    });
+    // Unpinned sorted by name: Design homepage, Fix login bug, Update README
+    expect(result[1].gid).toBe('2'); // Design homepage
+    expect(result[2].gid).toBe('1'); // Fix login bug
+    expect(result[3].gid).toBe('4'); // Update README
+  });
+
+  it('ignores nonexistent pinned GIDs', () => {
+    const result = filterAndSortTasks(makeTasks(), {
+      sortBy: 'name',
+      pinnedGids: ['999', '3']
+    });
+    expect(result[0].gid).toBe('3');
+    expect(result).toHaveLength(4);
+  });
+
+  it('treats empty pinnedGids as no-op', () => {
+    const withPin = filterAndSortTasks(makeTasks(), { sortBy: 'name', pinnedGids: [] });
+    const without = filterAndSortTasks(makeTasks(), { sortBy: 'name' });
+    expect(withPin.map(t => t.gid)).toEqual(without.map(t => t.gid));
+  });
+
+  it('pinning works with modified sort', () => {
+    const result = filterAndSortTasks(makeTasks(), {
+      sortBy: 'modified',
+      pinnedGids: ['4']  // oldest modified — should float to top
+    });
+    expect(result[0].gid).toBe('4');
+    // Rest sorted by modified desc: 3 (Feb 14), 2 (Feb 12), 1 (Feb 10)
+    expect(result[1].gid).toBe('3');
+  });
 });
 
 // ── filterAndSortProjects ────────────────────────────────────
@@ -239,5 +294,50 @@ describe('filterAndSortProjects', () => {
     const original = [...projects];
     filterAndSortProjects(projects, { searchQuery: 'x' });
     expect(projects.map(p => p.gid)).toEqual(original.map(p => p.gid));
+  });
+
+  // ── Pinned projects ──────────────────────────────────────
+
+  it('floats pinned projects to the top', () => {
+    const result = filterAndSortProjects(makeProjects(), {
+      pinnedGids: ['p2']
+    });
+    expect(result[0].gid).toBe('p2'); // Frontend pinned to top
+    expect(result[1].gid).toBe('p1'); // Backend (alphabetical)
+    expect(result[2].gid).toBe('p3'); // Design System
+  });
+
+  it('preserves name sort among pinned projects', () => {
+    const result = filterAndSortProjects(makeProjects(), {
+      pinnedGids: ['p2', 'p3']  // Frontend + Design System — alpha: Design System first
+    });
+    expect(result[0].gid).toBe('p3'); // Design System
+    expect(result[1].gid).toBe('p2'); // Frontend
+    expect(result[2].gid).toBe('p1'); // Backend (unpinned)
+  });
+
+  it('ignores nonexistent pinned project GIDs', () => {
+    const result = filterAndSortProjects(makeProjects(), {
+      pinnedGids: ['p999']
+    });
+    expect(result).toHaveLength(3);
+    expect(result[0].name).toBe('Backend');
+  });
+
+  it('treats empty pinnedGids as no-op', () => {
+    const withPin = filterAndSortProjects(makeProjects(), { pinnedGids: [] });
+    const without = filterAndSortProjects(makeProjects());
+    expect(withPin.map(p => p.gid)).toEqual(without.map(p => p.gid));
+  });
+
+  it('pinning works with membership filter', () => {
+    const result = filterAndSortProjects(makeProjects(), {
+      myProjectsOnly: true,
+      currentUserId: 'u1',
+      pinnedGids: ['p2']
+    });
+    expect(result).toHaveLength(2);
+    expect(result[0].gid).toBe('p2'); // Frontend pinned
+    expect(result[1].gid).toBe('p1'); // Backend
   });
 });

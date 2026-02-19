@@ -23,6 +23,8 @@ interface FilterSettings {
   excludedProjectPatterns: string[];
   includedTaskPatterns: string[];
   includedProjectPatterns: string[];
+  pinnedTaskGids: string[];
+  pinnedProjectGids: string[];
 }
 
 const EMPTY_FILTER_SETTINGS: FilterSettings = {
@@ -32,6 +34,8 @@ const EMPTY_FILTER_SETTINGS: FilterSettings = {
   excludedProjectPatterns: [],
   includedTaskPatterns: [],
   includedProjectPatterns: [],
+  pinnedTaskGids: [],
+  pinnedProjectGids: [],
 };
 
 /** Extract filter-relevant fields from full settings */
@@ -43,6 +47,8 @@ function extractFilterSettings(settings: MaskedSettings | Settings): FilterSetti
     excludedProjectPatterns: settings.excludedProjectPatterns || [],
     includedTaskPatterns: settings.includedTaskPatterns || [],
     includedProjectPatterns: settings.includedProjectPatterns || [],
+    pinnedTaskGids: settings.pinnedTaskGids || [],
+    pinnedProjectGids: settings.pinnedProjectGids || [],
   };
 }
 
@@ -254,6 +260,19 @@ export default function App() {
     setUnfilteredTaskCount(prev => prev !== null && prev !== undefined ? prev - 1 : prev);
   }, []);
 
+  const handleTogglePin = useCallback((type: 'task' | 'project', gid: string) => {
+    const key = type === 'task' ? 'pinnedTaskGids' : 'pinnedProjectGids';
+    setFilterSettings(prev => {
+      const current = prev[key];
+      const updated = current.includes(gid)
+        ? current.filter(g => g !== gid)
+        : [...current, gid];
+      // Persist to settings (async, fire-and-forget)
+      window.electronAPI.setSettings({ [key]: updated });
+      return { ...prev, [key]: updated };
+    });
+  }, []);
+
   // ── Render ──────────────────────────────────────────────────
 
   return (
@@ -399,6 +418,8 @@ export default function App() {
             onComplete={handleCompleteTask}
             currentUserId={currentUserId}
             cachedUsers={cachedUsers}
+            pinnedGids={filterSettings.pinnedTaskGids}
+            onTogglePin={handleTogglePin}
           />
         ) : (
           <ProjectList
@@ -406,6 +427,8 @@ export default function App() {
             searchQuery={searchQuery}
             myProjectsOnly={myProjectsOnly}
             currentUserId={currentUserId}
+            pinnedGids={filterSettings.pinnedProjectGids}
+            onTogglePin={handleTogglePin}
           />
         )}
       </div>

@@ -15,15 +15,19 @@ interface TaskListProps {
   onComplete: (taskGid: string) => void;
   currentUserId: string | null;
   cachedUsers: AsanaUser[];
+  pinnedGids: string[];
+  onTogglePin: (type: 'task' | 'project', gid: string) => void;
 }
 
 // ── Component ───────────────────────────────────────────────────
 
-export default function TaskList({ tasks, searchQuery, sortBy, selectedProjectGid, seenTimestamps, onMarkSeen, onComplete, currentUserId, cachedUsers }: TaskListProps) {
+export default function TaskList({ tasks, searchQuery, sortBy, selectedProjectGid, seenTimestamps, onMarkSeen, onComplete, currentUserId, cachedUsers, pinnedGids, onTogglePin }: TaskListProps) {
   const filteredAndSorted = useMemo(() =>
-    filterAndSortTasks(tasks, { searchQuery, sortBy, selectedProjectGid }),
-    [tasks, searchQuery, sortBy, selectedProjectGid]
+    filterAndSortTasks(tasks, { searchQuery, sortBy, selectedProjectGid, pinnedGids }),
+    [tasks, searchQuery, sortBy, selectedProjectGid, pinnedGids]
   );
+
+  const pinnedSet = useMemo(() => new Set(pinnedGids), [pinnedGids]);
 
   if (filteredAndSorted.length === 0 && tasks.length > 0) {
     return (
@@ -60,6 +64,8 @@ export default function TaskList({ tasks, searchQuery, sortBy, selectedProjectGi
           onComplete={onComplete}
           currentUserId={currentUserId}
           cachedUsers={cachedUsers}
+          isPinned={pinnedSet.has(task.gid)}
+          onTogglePin={onTogglePin}
         />
       ))}
     </>

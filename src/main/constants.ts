@@ -53,6 +53,8 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'apiKey' | 'apiKeyVerified' | 'win
   excludedProjectPatterns: [],
   includedTaskPatterns: [],
   includedProjectPatterns: [],
+  pinnedTaskGids: [],
+  pinnedProjectGids: [],
   openLinksIn: 'default',
   apiKey: null,
   apiKeyVerified: false,

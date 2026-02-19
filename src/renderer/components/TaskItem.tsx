@@ -13,6 +13,8 @@ interface TaskItemProps {
   onComplete: (taskGid: string) => void;
   currentUserId: string | null;
   cachedUsers: AsanaUser[];
+  isPinned: boolean;
+  onTogglePin: (type: 'task' | 'project', gid: string) => void;
 }
 
 type CompleteState = 'idle' | 'confirming' | 'completing';
@@ -103,7 +105,7 @@ function renderCommentText(text: string | null | undefined, users: AsanaUser[]):
  * - When the user expands comments, we update lastSeenModified to current modified_at.
  * - If the last comment was authored by the "I am" user, suppress the highlight.
  */
-export default function TaskItem({ task, lastSeenModified, onMarkSeen, onComplete, currentUserId, cachedUsers }: TaskItemProps) {
+export default function TaskItem({ task, lastSeenModified, onMarkSeen, onComplete, currentUserId, cachedUsers, isPinned, onTogglePin }: TaskItemProps) {
   const [commentsExpanded, setCommentsExpanded] = useState(false);
   const [comments, setComments] = useState<AsanaComment[] | null>(null);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -311,7 +313,7 @@ export default function TaskItem({ task, lastSeenModified, onMarkSeen, onComplet
   );
 
   return (
-    <div className={`task-item ${hasNewActivity ? 'highlighted' : ''}`} onContextMenu={handleContextMenu}>
+    <div className={`task-item ${isPinned ? 'pinned' : ''} ${hasNewActivity ? 'highlighted' : ''}`} onContextMenu={handleContextMenu}>
       <div className="task-item-header" onClick={handleToggleComments}>
         <div className="task-item-content">
           {/* Task name row with copy button */}
@@ -390,6 +392,13 @@ export default function TaskItem({ task, lastSeenModified, onMarkSeen, onComplet
           )}
         </div>
         <div className="task-item-actions" onClick={(e) => e.stopPropagation()}>
+          <button
+            className={`task-btn pin ${isPinned ? 'active' : ''}`}
+            onClick={() => onTogglePin('task', task.gid)}
+            title={isPinned ? 'Unpin' : 'Pin to Top'}
+          >
+            <Icon path={ICON_PATHS.pin} size={12} />
+          </button>
           <button
             className={`task-btn ${completeState === 'confirming' ? 'confirm' : 'complete'}`}
             onClick={handleComplete}

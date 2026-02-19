@@ -295,12 +295,31 @@ export function registerIpcHandlers({ store, asanaApi, getMainWindow, getSetting
 
   ipcMain.on('context-menu:item', (_, { type, name, gid }: ContextMenuItem) => {
     const excludeKey = type === 'task' ? 'excludedTaskPatterns' : 'excludedProjectPatterns';
+    const pinKey = type === 'task' ? 'pinnedTaskGids' : 'pinnedProjectGids';
+
+    // Check if item is currently pinned
+    const settings = store.getSettings();
+    const pinnedList = (settings[pinKey] as string[]) || [];
+    const isPinned = pinnedList.includes(gid);
+
     const template: Electron.MenuItemConstructorOptions[] = [
+      {
+        label: isPinned ? 'Unpin' : 'Pin to Top',
+        click: () => {
+          const current = (store.getSettings()[pinKey] as string[]) || [];
+          const updated = isPinned
+            ? current.filter(g => g !== gid)
+            : [...current, gid];
+          store.setSettings({ [pinKey]: updated });
+          broadcastSettingsToRenderer(store, getMainWindow);
+        }
+      },
+      { type: 'separator' },
       {
         label: `Exclude "${name.length > 30 ? name.substring(0, 30) + '\u2026' : name}"`,
         click: () => {
-          const settings = store.getSettings() as Record<string, unknown>;
-          const list = [...((settings[excludeKey] as string[]) || []), name];
+          const currentSettings = store.getSettings() as Record<string, unknown>;
+          const list = [...((currentSettings[excludeKey] as string[]) || []), name];
           store.setSettings({ [excludeKey]: list });
           // Notify renderer to re-apply filters instantly (no re-poll needed)
           broadcastSettingsToRenderer(store, getMainWindow);

@@ -5,6 +5,22 @@ All notable changes to Panoptisana will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7] - 2026-02-19
+
+### Added
+- Pinned tasks and projects — pin important items to the top of the list via right-click context menu ("Pin to Top" / "Unpin") or the inline pin button in the actions column
+- Pinned state persists across sessions (stored in SQLite settings)
+- Pinned items float to the top regardless of sort order while preserving relative sort order within each group (pinned and unpinned)
+- Visual treatment: gold/amber left border on pinned items; pin button turns amber when active
+- All existing filters (exclusion, inclusion, search, project dropdown) still apply to pinned items — pinning is a sort override, not a filter bypass
+
+### Changed
+- Projects tab UI redesign — project items now mirror the task item layout for visual consistency
+- Project name row with always-visible copy button
+- Project GID row with monospace GID and copy button (replaces the previous "Copy GID" action button)
+- Meta row showing project owner name and relative "last modified" timestamp
+- Actions column reordered: Pin, Open Project, Copy URL (vertical layout matching task items)
+
 ## [0.5.6] - 2026-02-17
 
 ### Changed

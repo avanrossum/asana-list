@@ -103,6 +103,8 @@ export interface Settings {
   excludedProjectPatterns: string[];
   includedTaskPatterns: string[];
   includedProjectPatterns: string[];
+  pinnedTaskGids: string[];
+  pinnedProjectGids: string[];
   openLinksIn: string;
   apiKey: EncryptedApiKey | null;
   apiKeyVerified: boolean;

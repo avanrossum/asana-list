@@ -2,6 +2,7 @@ import { useMemo, useState, useCallback } from 'react';
 import Icon from './Icon';
 import { ICON_PATHS } from '../icons';
 import { filterAndSortProjects } from '../../shared/filters';
+import { formatRelativeTime } from '../../shared/formatters';
 import { buildSectionsCsv, buildFieldsCsv } from '../../shared/csv';
 import type { AsanaProject, AsanaSection, AsanaField } from '../../shared/types';
 
@@ -41,19 +42,25 @@ interface ProjectListProps {
   searchQuery: string;
   myProjectsOnly: boolean;
   currentUserId: string | null;
+  pinnedGids: string[];
+  onTogglePin: (type: 'task' | 'project', gid: string) => void;
 }
 
 interface ProjectItemProps {
   project: AsanaProject;
+  isPinned: boolean;
+  onTogglePin: (type: 'task' | 'project', gid: string) => void;
 }
 
 // ── Component ───────────────────────────────────────────────────
 
-export default function ProjectList({ projects, searchQuery, myProjectsOnly, currentUserId }: ProjectListProps) {
+export default function ProjectList({ projects, searchQuery, myProjectsOnly, currentUserId, pinnedGids, onTogglePin }: ProjectListProps) {
   const filtered = useMemo(() =>
-    filterAndSortProjects(projects, { searchQuery, myProjectsOnly, currentUserId }),
-    [projects, searchQuery, myProjectsOnly, currentUserId]
+    filterAndSortProjects(projects, { searchQuery, myProjectsOnly, currentUserId, pinnedGids }),
+    [projects, searchQuery, myProjectsOnly, currentUserId, pinnedGids]
   );
+
+  const pinnedSet = useMemo(() => new Set(pinnedGids), [pinnedGids]);
 
   if (filtered.length === 0 && projects.length > 0) {
     return (
@@ -76,14 +83,21 @@ export default function ProjectList({ projects, searchQuery, myProjectsOnly, cur
   return (
     <>
       {filtered.map(project => (
-        <ProjectItem key={project.gid} project={project} />
+        <ProjectItem
+          key={project.gid}
+          project={project}
+          isPinned={pinnedSet.has(project.gid)}
+          onTogglePin={onTogglePin}
+        />
       ))}
     </>
   );
 }
 
-function ProjectItem({ project }: ProjectItemProps) {
-  const [copied, setCopied] = useState(false);
+function ProjectItem({ project, isPinned, onTogglePin }: ProjectItemProps) {
+  const [copiedGid, setCopiedGid] = useState(false);
+  const [copiedName, setCopiedName] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
   const [panelExpanded, setPanelExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>('sections');
 
@@ -105,8 +119,29 @@ function ProjectItem({ project }: ProjectItemProps) {
   const handleCopyGid = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(project.gid);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      setCopiedGid(true);
+      setTimeout(() => setCopiedGid(false), 1500);
+    } catch (err) {
+      console.error('Copy failed:', err);
+    }
+  }, [project.gid]);
+
+  const handleCopyName = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(project.name);
+      setCopiedName(true);
+      setTimeout(() => setCopiedName(false), 1500);
+    } catch (err) {
+      console.error('Copy failed:', err);
+    }
+  }, [project.name]);
+
+  const handleCopyUrl = useCallback(async () => {
+    try {
+      const url = `https://app.asana.com/0/${project.gid}`;
+      await navigator.clipboard.writeText(url);
+      setCopiedUrl(true);
+      setTimeout(() => setCopiedUrl(false), 1500);
     } catch (err) {
       console.error('Copy failed:', err);
     }
@@ -184,23 +219,62 @@ function ProjectItem({ project }: ProjectItemProps) {
   }, [project.name, project.gid]);
 
   const dotColor = PROJECT_COLORS[project.color] || PROJECT_COLORS.none;
+  const modifiedText = formatRelativeTime(project.modified_at);
 
   return (
-    <div className="project-item" onContextMenu={handleContextMenu}>
+    <div className={`project-item ${isPinned ? 'pinned' : ''}`} onContextMenu={handleContextMenu}>
       <div className="project-item-header">
         <span className="project-color-dot" style={{ background: dotColor }} />
         <div className="project-item-content">
-          <div className="project-item-name">{project.name}</div>
+          {/* Project name row with copy button */}
+          <div className="project-item-name-row">
+            <span className="project-item-name">{project.name}</span>
+            <button
+              className="task-inline-copy task-inline-copy-always"
+              onClick={(e) => { e.stopPropagation(); handleCopyName(); }}
+              title={copiedName ? 'Copied!' : 'Copy project name'}
+            >
+              <Icon path={ICON_PATHS.copy} size={12} />
+            </button>
+            {copiedName && <span className="task-copied-label">Copied!</span>}
+          </div>
+
+          {/* GID row with copy button */}
+          <div className="project-item-gid-row">
+            <span className="project-item-gid">{project.gid}</span>
+            <button
+              className="task-inline-copy task-inline-copy-always"
+              onClick={(e) => { e.stopPropagation(); handleCopyGid(); }}
+              title={copiedGid ? 'Copied!' : 'Copy project GID'}
+            >
+              <Icon path={ICON_PATHS.copy} size={12} />
+            </button>
+            {copiedGid && <span className="task-copied-label">Copied!</span>}
+          </div>
+
+          {/* Meta row: owner, modified */}
           <div className="project-item-meta">
             {project.owner?.name && <span>{project.owner.name}</span>}
+            {modifiedText && (
+              <span className="project-item-modified" title={project.modified_at}>
+                {modifiedText}
+              </span>
+            )}
           </div>
         </div>
         <div className="project-item-actions">
+          <button
+            className={`task-btn pin ${isPinned ? 'active' : ''}`}
+            onClick={() => onTogglePin('project', project.gid)}
+            title={isPinned ? 'Unpin' : 'Pin to Top'}
+          >
+            <Icon path={ICON_PATHS.pin} size={12} />
+          </button>
           <button className="task-btn primary" onClick={handleOpenProject}>
             Open Project
           </button>
-          <button className="task-btn secondary" onClick={handleCopyGid}>
-            {copied ? 'Copied!' : 'Copy GID'}
+          <button className="task-btn secondary" onClick={handleCopyUrl}>
+            {copiedUrl ? 'Copied!' : 'Copy URL'}
           </button>
         </div>
       </div>

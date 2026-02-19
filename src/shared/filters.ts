@@ -16,12 +16,14 @@ interface TaskFilterOptions {
   searchQuery?: string;
   sortBy?: SortBy;
   selectedProjectGid?: string;
+  pinnedGids?: string[];
 }
 
 interface ProjectFilterOptions {
   searchQuery?: string;
   myProjectsOnly?: boolean;
   currentUserId?: string | null;
+  pinnedGids?: string[];
 }
 
 /**
@@ -69,7 +71,7 @@ export function applyItemFilters(
  */
 export function filterAndSortTasks(
   tasks: AsanaTask[],
-  { searchQuery, sortBy, selectedProjectGid }: TaskFilterOptions = {}
+  { searchQuery, sortBy, selectedProjectGid, pinnedGids }: TaskFilterOptions = {}
 ): AsanaTask[] {
   let result = [...tasks];
 
@@ -112,6 +114,14 @@ export function filterAndSortTasks(
     }
   });
 
+  // Float pinned items to the top (stable partition preserving sort order within each group)
+  if (pinnedGids && pinnedGids.length > 0) {
+    const pinSet = new Set(pinnedGids);
+    const pinned = result.filter(t => pinSet.has(t.gid));
+    const unpinned = result.filter(t => !pinSet.has(t.gid));
+    result = [...pinned, ...unpinned];
+  }
+
   return result;
 }
 
@@ -120,7 +130,7 @@ export function filterAndSortTasks(
  */
 export function filterAndSortProjects(
   projects: AsanaProject[],
-  { searchQuery, myProjectsOnly, currentUserId }: ProjectFilterOptions = {}
+  { searchQuery, myProjectsOnly, currentUserId, pinnedGids }: ProjectFilterOptions = {}
 ): AsanaProject[] {
   let result = [...projects];
 
@@ -143,5 +153,14 @@ export function filterAndSortProjects(
 
   // Sort by name
   result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+  // Float pinned items to the top (stable partition preserving sort order within each group)
+  if (pinnedGids && pinnedGids.length > 0) {
+    const pinSet = new Set(pinnedGids);
+    const pinned = result.filter(p => pinSet.has(p.gid));
+    const unpinned = result.filter(p => !pinSet.has(p.gid));
+    result = [...pinned, ...unpinned];
+  }
+
   return result;
 }

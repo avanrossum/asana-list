@@ -4,7 +4,7 @@
 
 Open-source Asana task and project visibility tool for macOS. Displays a searchable list of incomplete tasks and active projects with comment tracking and auto-updates.
 
-## Current Version: 0.5.6
+## Current Version: 0.5.7
 
 ### Core Features (v0.1.0)
 - [x] Searchable task list with sorting
@@ -118,16 +118,48 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [x] `parent` field added to `AsanaTask` type and API opt_fields
 - [x] `section.gid` added to task memberships for per-section copy-GID
 
-## Next Immediate
+### v0.5.7 Additions
+- [x] Pinned tasks and projects — pin/unpin via right-click context menu or inline pin button, persists across sessions, gold/amber left border, stable partition sort (pinned float to top preserving relative order)
+- [x] Projects tab UI parity — project items redesigned to mirror task item layout: name-row with copy, GID-row with copy, meta row (owner + relative modified time), vertical actions (Pin, Open Project, Copy URL)
 
+## Up Next
+
+### Bugs & Fixes
 - [x] Fix: Shell injection in `ipc-handlers.ts` — `execSync` with string interpolation replaced by `execFile` with argument array (v0.5.6 code review)
 - [x] Fix: Type-unsafe `as any` casts in all 3 preload files — typed against `IpcEventChannelMap` (v0.5.6 code review)
 - [ ] Fix: CSV export save dialog appears behind the main window — needs `alwaysOnTop` or parent window handling so the native save dialog is visible
 - [ ] Fix: "Only my projects" checkbox missing from the Projects tab — regression, needs immediate resolution
-- [ ] Verify: Status bar "out of X" total no longer appears when using "Show tasks for" multi-select — only the filtered count is shown. This may be working as intended, further verification required
-- [ ] Fix: Changing "Show tasks for" user selection does not immediately update the task list — may be blocked by an in-progress poll, or the settings broadcast isn't triggering a re-filter/re-poll. Possible solution: clear the task list on user selection change and show a "Display conditions changed, refetching..." message until the re-poll completes. Needs investigation (pre-v1)
+- [ ] Verify: Status bar "out of X" total no longer appears when using "Show tasks for" multi-select — only the filtered count is shown. May be working as intended
+- [ ] Fix: Changing "Show tasks for" user selection does not immediately update the task list — may be blocked by an in-progress poll, or the settings broadcast isn't triggering a re-filter/re-poll. Possible solution: clear the task list on user selection change and show a "Display conditions changed, refetching..." message until the re-poll completes
+
+### Features (priority order)
+- [x] Pinned tasks and projects — pin/unpin action on tasks and projects that keeps pinned items sorted to the top of the list regardless of current sort order. Pinned state stored in SQLite (persists across sessions). Visual treatment: gold/amber left border. UX: clean pin/unpin toggle — right-click context menu + a pin icon button on the item. All existing filters still apply to pinned items (pinning is a sort override, not a filter bypass)
+- [x] Projects tab UI parity — project items now mirror task item redesign: name-row with copy button, GID-row with copy button, meta row (owner + relative modified time), vertical actions column (Pin, Open Project, Copy URL)
 - [ ] Comment count — display number of comments on each task in the task list
 - [ ] First-pull loading state — show "Loading..." or similar on the main screen after entering an API key for the first time, so the empty list doesn't look broken while the initial poll runs
+
+## Feature Roadmap
+
+### Task Detail View (timing TBD — pre or post v1)
+- [ ] Slide-out task detail panel — a detail view that slides out from the task list, showing full task information in a more spacious layout
+- [ ] Full comment history — list view shows only the latest comment; detail view shows all comments with scrolling
+- [ ] Subtask and parent task navigation — display subtasks on the detail view with clickable links, and link back to parent task if the task is a subtask
+- [ ] Quick-comment buttons — preset comment templates for common responses (e.g. "Meeting needed to discuss", "Blocked — waiting on dependency", "In progress — will update by EOD") posted directly to the task via the Asana API
+
+### Comments & Activity
+- [ ] Post a comment to a task from within the app
+- [ ] Comment change detection — track comment count + latest `created_at` timestamp per task instead of `modified_at`. More accurate new-comment highlighting without false positives from non-comment changes. Depends on comment caching in SQLite
+- [ ] "Sort by last comment" sort option for task list
+- [ ] Notification for new comments
+
+### Interaction & Navigation
+- [ ] Inbox slide-out drawer — Asana inbox notifications panel that slides in from the window edge via CSS `transform: translateX()`. Main process detects window position relative to screen bounds (`screen.getDisplayMatching`) to determine slide direction (left or right edge). Fixed-position overlay, no separate window
+- [ ] Keyboard navigation in task list
+- [ ] Task count badges in tray menu
+- [ ] Task grouping (by project, by assignee, by section)
+
+### Authentication
+- [ ] OAuth authentication (PKCE flow with localhost callback) as alternative to PAT — "Connect to Asana" button for easier onboarding
 
 ## Pre-v1: Code Quality / Architecture
 
@@ -137,22 +169,24 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [ ] Move update IPC handlers (`update-dialog:*`, `app:check-for-updates`, `app:download-update`, `app:restart-for-update`) into the extracted updater module so the full IPC surface is auditable from fewer files
 - [ ] Extract `_getCache(key)` private method in `store.ts` — `getCachedTasks`/`getCachedProjects`/`getCachedUsers` are identical (get row, parse JSON, return `[]`)
 - [ ] DRY: `visibleProjectCount` in `App.tsx` duplicates the filter logic from `ProjectList.tsx` (membership + search). Extract shared filter function or compute count inside `ProjectList` and lift it via callback
+- [ ] DRY: Extract `useCopyToClipboard` hook — 6 nearly identical copy handlers in `TaskItem.tsx` (~60 lines), same pattern in `ProjectList.tsx`. Extract to shared hook, extract `<CopyButton />` component
+- [ ] DRY: Deduplicate export handlers in `ProjectList.tsx` — sections CSV and fields CSV export handlers are nearly identical, extract shared `exportCsvData()` helper
 - [ ] Move `ACCENT_COLORS` to a shared constants file
 - [ ] Replace `app.isQuitting` monkey-patch on the Electron `app` object with a module-level `let isQuitting` variable
 - [ ] Replace `updateDialogWindow._initData` with a module-scoped variable instead of storing data on the BrowserWindow object
-- [ ] TypeScript: replace `(err as Error).message` casts with a shared `toErrorMessage()` utility
-- [x] TypeScript: remove `as any` casts on preload IPC event handlers — type the `IpcRendererEvent` callbacks against the IPC channel maps for proper type safety at the boundary (v0.5.6 code review)
-- [ ] DRY: Extract `useCopyToClipboard` hook — 6 nearly identical copy handlers in `TaskItem.tsx` (~60 lines), same pattern in `ProjectList.tsx`. Extract to shared hook, extract `<CopyButton />` component
-- [ ] DRY: Deduplicate export handlers in `ProjectList.tsx` — sections CSV and fields CSV export handlers are nearly identical, extract shared `exportCsvData()` helper
+- [ ] Add `React.memo` to `TaskItem` and `ProjectList` — both rendered in `.map()` loops with object props; list can exceed 2000 items
 - [ ] Split `components.css` (825 lines) — monolith styles tasks, projects, comments, status bar, error banner. Split into per-component files (`task-item.css`, `project-list.css`, `status-bar.css`). Replace hardcoded `#ffffff` with CSS variable, extract repeated truncation/flex-center patterns into utility classes
 - [ ] Split `SettingsApp.tsx` (468 lines) — extract General, Filters, About tabs into separate components
 - [ ] Split `demo-data.ts` (399 lines) — separate demo users, projects, and tasks into individual files for readability
 - [ ] Fix mutable global `_sectionCounter` in `demo-data.ts` — makes `getDemoTasks()` non-idempotent. Scope inside the function or use deterministic IDs
-- [ ] Add `React.memo` to `TaskItem` and `ProjectList` — both rendered in `.map()` loops with object props; list can exceed 2000 items
 - [ ] Replace hardcoded colors in `settings.css` (`#ffffff`, `#f5f5f7`, `#1a1a2e`) with CSS variables from `variables.css`
-- [ ] TypeScript: tighten `Settings.accentColor` from `string` to `AccentColor` union type
-- [ ] TypeScript: tighten `Settings.openLinksIn` from `string` to union type (`'default' | 'asana-desktop' | string`)
-- [ ] TypeScript: standardize null/optional patterns in `types.ts` — `AsanaTask` mixes `string | null` and `?: string` for optional fields
+
+### TypeScript
+- [ ] Replace `(err as Error).message` casts with a shared `toErrorMessage()` utility
+- [x] Remove `as any` casts on preload IPC event handlers — typed against `IpcEventChannelMap` (v0.5.6 code review)
+- [ ] Tighten `Settings.accentColor` from `string` to `AccentColor` union type
+- [ ] Tighten `Settings.openLinksIn` from `string` to union type (`'default' | 'asana-desktop' | string`)
+- [ ] Standardize null/optional patterns in `types.ts` — `AsanaTask` mixes `string | null` and `?: string` for optional fields
 - [ ] Replace non-null assertions (`seg.url!`, `store!`) with optional chaining or type narrowing guards
 
 ### Security
@@ -172,34 +206,10 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [x] Unit tests for `applyItemFilters` logic (54 tests in `filters.test.ts` and `formatters.test.ts`)
 - [ ] Add JSDoc to shared utilities (applyTheme, useThemeListener)
 
-## Task Detail View (timing TBD — pre or post v1)
-
-- [ ] Slide-out task detail panel — a detail view that slides out from the task list, showing full task information in a more spacious layout
-- [ ] Full comment history — list view shows only the latest comment; detail view shows all comments with scrolling
-- [ ] Subtask and parent task navigation — display subtasks on the detail view with clickable links, and link back to parent task if the task is a subtask
-- [ ] Quick-comment buttons — preset comment templates for common responses (e.g. "Meeting needed to discuss", "Blocked — waiting on dependency", "In progress — will update by EOD") posted directly to the task via the Asana API
-
-## Next Up (Post v1)
-
-- [x] "Open Asana links in..." selector — detect installed browsers and Asana desktop app, let user choose where links open
-- [ ] "Sort by last comment" sort option for task list
-- [ ] Post a comment to a task from within the app
-- [ ] OAuth authentication (PKCE flow with localhost callback) as alternative to PAT — "Connect to Asana" button for easier onboarding
-- [x] SQLite storage engine (`better-sqlite3`) — replace JSON file store with SQLite for structured queries, task/comment caching, and offline history. Include auto-backup on launch and corruption detection with automatic recovery from latest backup
-- [ ] Comment change detection — track comment count + latest `created_at` timestamp per task instead of `modified_at`. More accurate new-comment highlighting without false positives from non-comment changes. Depends on SQLite migration for comment caching
-
 ## Feature Backlog
-
-### High Priority
-- [ ] Inbox slide-out drawer — Asana inbox notifications panel that slides in from the window edge via CSS `transform: translateX()`. Main process detects window position relative to screen bounds (`screen.getDisplayMatching`) to determine slide direction (left or right edge). Fixed-position overlay, no separate window
-- [ ] Task count badges in tray menu
-- [ ] Notification for new comments
-- [ ] Keyboard navigation in task list
-- [x] Task subtask indicator (v0.5.6 — "subtask of [Parent]"; full subtask listing planned in Task Detail View)
 
 ### Medium Priority
 - [ ] Custom sort persistence
-- [ ] Task grouping (by project, by assignee, by section)
 - [ ] Project status display
 - [ ] Search history
 
@@ -209,7 +219,7 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [ ] Export task list
 - [ ] Window position memory per display
 
-### Code Quality / Hardening (Post v1)
+### Code Quality / Hardening
 - [ ] Accessibility: add aria labels and keyboard navigation to task/project lists
 - [ ] Structured logging (replace bare console.log/warn/error)
 - [ ] Error boundary components for each renderer — crash in one component takes down entire window
