@@ -316,6 +316,19 @@ export class Store {
     this._archiveManyInbox(storyGids, now);
   }
 
+  // ── Inbox Activity Tracking ─────────────────────────────────────
+
+  getLastInboxOpenedAt(): number {
+    const row = this._stmts.getSetting.get('lastInboxOpenedAt') as SettingsRow | undefined;
+    if (!row) return 0;
+    const val = Number(row.value);
+    return Number.isFinite(val) ? val : 0;
+  }
+
+  setLastInboxOpenedAt(timestamp: number): void {
+    this._stmts.setSetting.run('lastInboxOpenedAt', String(timestamp));
+  }
+
   // ── Lifecycle ─────────────────────────────────────────────────
 
   flush(): void {

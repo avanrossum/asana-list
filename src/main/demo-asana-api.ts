@@ -164,6 +164,7 @@ export class DemoAsanaAPI implements AsanaAPILike {
         projects,
         unfilteredTaskCount: tasks.length,
         unfilteredProjectCount: projects.length,
+        hasNewInboxActivity: true,
       });
     }
   }

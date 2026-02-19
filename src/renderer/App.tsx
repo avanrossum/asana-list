@@ -73,6 +73,7 @@ export default function App() {
   const [filterSettings, setFilterSettings] = useState<FilterSettings>(EMPTY_FILTER_SETTINGS);
   const [inboxOpen, setInboxOpen] = useState(false);
   const [inboxSlideDirection, setInboxSlideDirection] = useState<'left' | 'right'>('right');
+  const [hasNewInboxActivity, setHasNewInboxActivity] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // ── Init ────────────────────────────────────────────────────
@@ -127,6 +128,7 @@ export default function App() {
       if (data.projects) setProjects(data.projects);
       if (data.unfilteredTaskCount !== null && data.unfilteredTaskCount !== undefined) setUnfilteredTaskCount(data.unfilteredTaskCount);
       if (data.unfilteredProjectCount !== null && data.unfilteredProjectCount !== undefined) setUnfilteredProjectCount(data.unfilteredProjectCount);
+      if (data.hasNewInboxActivity !== undefined) setHasNewInboxActivity(data.hasNewInboxActivity);
       setIsConnected(true);
     });
 
@@ -315,6 +317,9 @@ export default function App() {
     const dir = await window.electronAPI.getSlideDirection();
     setInboxSlideDirection(dir);
     setInboxOpen(true);
+    // Clear the notification dot optimistically and persist the timestamp
+    setHasNewInboxActivity(false);
+    window.electronAPI.markInboxOpened();
   }, []);
 
   const handleCloseInbox = useCallback(() => {
@@ -337,8 +342,9 @@ export default function App() {
           >
             <Icon path={ICON_PATHS.refresh} size={16} />
           </button>
-          <button className="icon-btn" onClick={handleOpenInbox} title="Inbox (Cmd+I)">
+          <button className="icon-btn inbox-btn" onClick={handleOpenInbox} title="Inbox (Cmd+I)">
             <Icon path={ICON_PATHS.inbox} size={16} />
+            {hasNewInboxActivity && <span className="inbox-dot" />}
           </button>
           <button className="icon-btn" onClick={handleOpenSettings} title="Settings">
             <Icon path={ICON_PATHS.settings} size={16} />

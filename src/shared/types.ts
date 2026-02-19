@@ -182,6 +182,7 @@ export interface PollDataPacket {
   projects?: AsanaProject[];
   unfilteredTaskCount?: number;
   unfilteredProjectCount?: number;
+  hasNewInboxActivity?: boolean;
   error?: string;
 }
 
@@ -242,6 +243,7 @@ export interface IpcInvokeChannelMap {
   'inbox:get-archived-gids':  { args: [];                                    return: string[] };
   'inbox:archive':            { args: [storyGid: string];                    return: void };
   'inbox:archive-all':        { args: [storyGids: string[]];                 return: void };
+  'inbox:mark-opened':        { args: [];                                    return: void };
 
   'window:get-slide-direction': { args: [];                                  return: 'left' | 'right' };
 
@@ -314,6 +316,7 @@ export interface ElectronAPI {
   getArchivedInboxGids(): Promise<string[]>;
   archiveInboxItem(storyGid: string): Promise<void>;
   archiveAllInboxItems(storyGids: string[]): Promise<void>;
+  markInboxOpened(): Promise<void>;
   getSlideDirection(): Promise<'left' | 'right'>;
 
   // Context menu

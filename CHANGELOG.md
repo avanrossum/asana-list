@@ -5,6 +5,13 @@ All notable changes to Panoptisana will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.9] - 2026-02-19
+
+### Added
+- Inbox notification dot — accent-colored dot on the inbox button indicates new activity since the inbox was last opened, computed during the existing poll cycle with zero additional API calls
+- `lastInboxOpenedAt` timestamp persisted in SQLite settings for cross-session dot state
+- Demo mode always shows the inbox dot for screenshots/video
+
 ## [0.5.8] - 2026-02-19
 
 ### Added

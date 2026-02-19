@@ -33,6 +33,7 @@ const electronAPI: ElectronAPI = {
   getArchivedInboxGids: () => ipcRenderer.invoke('inbox:get-archived-gids'),
   archiveInboxItem: (storyGid) => ipcRenderer.invoke('inbox:archive', storyGid),
   archiveAllInboxItems: (storyGids) => ipcRenderer.invoke('inbox:archive-all', storyGids),
+  markInboxOpened: () => ipcRenderer.invoke('inbox:mark-opened'),
   getSlideDirection: () => ipcRenderer.invoke('window:get-slide-direction'),
 
   // ── Context Menu ────────────────────────────────────────────

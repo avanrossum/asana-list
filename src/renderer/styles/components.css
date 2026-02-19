@@ -71,6 +71,22 @@
   to { transform: rotate(360deg); }
 }
 
+/* ── Inbox Notification Dot ── */
+.inbox-btn {
+  position: relative;
+}
+
+.inbox-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  pointer-events: none;
+}
+
 /* ── Tabs ── */
 .tab-bar {
   display: flex;

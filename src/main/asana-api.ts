@@ -412,9 +412,21 @@ export class AsanaAPI {
       this._store.setCachedTasks(tasks);
       this._store.setCachedProjects(projects);
 
+      // Check for new inbox activity by comparing task modified_at against last inbox open.
+      // Zero extra API calls — pure in-memory comparison on tasks we already have.
+      const lastInboxOpenedAt = this._store.getLastInboxOpenedAt();
+      const inboxUserId = settings.currentUserId || null;
+      const candidateTasks = inboxUserId
+        ? tasks.filter(t => t.assignee?.gid === inboxUserId)
+        : tasks;
+      const hasNewInboxActivity = candidateTasks.some(t => {
+        if (!t.modified_at) return false;
+        return new Date(t.modified_at).getTime() > lastInboxOpenedAt;
+      });
+
       // Send unfiltered data to renderer (it will apply filters locally for instant feedback)
       if (this._onUpdate) {
-        this._onUpdate({ tasks, projects, unfilteredTaskCount, unfilteredProjectCount });
+        this._onUpdate({ tasks, projects, unfilteredTaskCount, unfilteredProjectCount, hasNewInboxActivity });
       }
     } catch (err) {
       console.error('[asana-api] Poll failed:', (err as Error).message);

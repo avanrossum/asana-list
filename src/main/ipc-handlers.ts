@@ -229,6 +229,15 @@ export function registerIpcHandlers({ store, asanaApi, getMainWindow, getSetting
     store.archiveAllInboxItems(storyGids);
   });
 
+  ipcMain.handle('inbox:mark-opened', () => {
+    store.setLastInboxOpenedAt(Date.now());
+    // Clear the dot immediately without waiting for next poll
+    const mainWin = getMainWindow();
+    if (mainWin && !mainWin.isDestroyed()) {
+      mainWin.webContents.send('asana:data-updated', { hasNewInboxActivity: false });
+    }
+  });
+
   ipcMain.handle('window:get-slide-direction', (): 'left' | 'right' => {
     const mainWin = getMainWindow();
     if (!mainWin || mainWin.isDestroyed()) return 'right';

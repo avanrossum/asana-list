@@ -4,7 +4,7 @@
 
 Open-source Asana task and project visibility tool for macOS. Displays a searchable list of incomplete tasks and active projects with comment tracking and auto-updates.
 
-## Current Version: 0.5.8
+## Current Version: 0.5.9
 
 ### Core Features (v0.1.0)
 - [x] Searchable task list with sorting
@@ -136,6 +136,11 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [x] Keyboard shortcut: Cmd/Ctrl+I to toggle inbox drawer
 - [x] Demo mode inbox — 8 realistic demo notifications with varied subtypes
 - [x] Fix: Stale demo users in Settings — session-scoped user refresh flag ensures workspace users are fetched once per app launch regardless of cached demo data
+
+### v0.5.9 Additions
+- [x] Inbox notification dot — accent-colored dot on inbox button when assigned tasks have been modified since last inbox open, piggybacks on existing poll cycle (zero extra API calls)
+- [x] `lastInboxOpenedAt` SQLite timestamp — persists across sessions, clears dot optimistically when inbox opens
+- [x] Demo mode inbox dot — always shows dot for screenshots/video
 
 ## Up Next
 
