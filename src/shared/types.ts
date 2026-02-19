@@ -74,6 +74,35 @@ export interface AsanaWorkspace {
   name?: string;
 }
 
+export interface AsanaStory {
+  gid: string;
+  text: string;
+  html_text?: string;
+  created_at: string;
+  created_by?: { gid?: string; name: string };
+  type: string;
+  resource_subtype: string;
+  sticker_name?: string | null;
+  num_likes?: number;
+}
+
+export interface InboxNotification {
+  storyGid: string;
+  taskGid: string;
+  taskName: string;
+  text: string;
+  createdAt: string;
+  createdBy?: { gid?: string; name: string };
+  resourceSubtype: string;
+  stickerName?: string | null;
+  numLikes?: number;
+}
+
+export interface InboxFetchResult {
+  notifications: InboxNotification[];
+  error?: string;
+}
+
 
 // ── Application Settings ───────────────────────────────────────────────────
 
@@ -110,6 +139,7 @@ export interface Settings {
   apiKeyVerified: boolean;
   windowBounds: WindowBounds | null;
   maxSearchPages?: number;
+  inboxTaskLimit?: number;
 }
 
 /** Settings as seen by the renderer — apiKey masked as '••••••••' or null */
@@ -133,6 +163,8 @@ export interface AsanaAPILike {
   getWorkspaces(): Promise<AsanaWorkspace[]>;
   getUsers(workspaceGid: string): Promise<AsanaUser[]>;
   getTaskComments(taskGid: string): Promise<AsanaComment[]>;
+  getTaskStories(taskGid: string): Promise<AsanaStory[]>;
+  fetchInboxNotifications(tasks: AsanaTask[], currentUserId: string | null, limit: number): Promise<InboxNotification[]>;
   getProjectSections(projectGid: string): Promise<AsanaSection[]>;
   getProjectFields(projectGid: string): Promise<AsanaField[]>;
   completeTask(taskGid: string): Promise<{ data: unknown }>;
@@ -206,6 +238,13 @@ export interface IpcInvokeChannelMap {
   'asana:complete-task':      { args: [taskGid: string];                     return: CompleteTaskResult };
   'asana:refresh':            { args: [];                                    return: void };
 
+  'inbox:fetch-notifications':{ args: [];                                    return: InboxFetchResult };
+  'inbox:get-archived-gids':  { args: [];                                    return: string[] };
+  'inbox:archive':            { args: [storyGid: string];                    return: void };
+  'inbox:archive-all':        { args: [storyGids: string[]];                 return: void };
+
+  'window:get-slide-direction': { args: [];                                  return: 'left' | 'right' };
+
   'app:get-version':          { args: [];                                    return: string };
   'app:check-for-updates':    { args: [];                                    return: void };
   'app:open-url':             { args: [url: string];                         return: void };
@@ -269,6 +308,13 @@ export interface ElectronAPI {
   // Comment tracking
   getSeenTimestamps(): Promise<Record<string, string>>;
   setSeenTimestamp(taskGid: string, timestamp: string): Promise<void>;
+
+  // Inbox
+  fetchInboxNotifications(): Promise<InboxFetchResult>;
+  getArchivedInboxGids(): Promise<string[]>;
+  archiveInboxItem(storyGid: string): Promise<void>;
+  archiveAllInboxItems(storyGids: string[]): Promise<void>;
+  getSlideDirection(): Promise<'left' | 'right'>;
 
   // Context menu
   showItemContextMenu(item: ContextMenuItem): void;

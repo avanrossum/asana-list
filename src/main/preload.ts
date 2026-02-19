@@ -28,6 +28,13 @@ const electronAPI: ElectronAPI = {
   getSeenTimestamps: () => ipcRenderer.invoke('store:get-seen-timestamps'),
   setSeenTimestamp: (taskGid, timestamp) => ipcRenderer.invoke('store:set-seen-timestamp', taskGid, timestamp),
 
+  // ── Inbox ──────────────────────────────────────────────────
+  fetchInboxNotifications: () => ipcRenderer.invoke('inbox:fetch-notifications'),
+  getArchivedInboxGids: () => ipcRenderer.invoke('inbox:get-archived-gids'),
+  archiveInboxItem: (storyGid) => ipcRenderer.invoke('inbox:archive', storyGid),
+  archiveAllInboxItems: (storyGids) => ipcRenderer.invoke('inbox:archive-all', storyGids),
+  getSlideDirection: () => ipcRenderer.invoke('window:get-slide-direction'),
+
   // ── Context Menu ────────────────────────────────────────────
   showItemContextMenu: ({ type, name, gid }) => ipcRenderer.send('context-menu:item', { type, name, gid }),
 

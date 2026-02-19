@@ -1,4 +1,4 @@
-import { ipcMain, app, dialog, Menu, shell, clipboard, BrowserWindow } from 'electron';
+import { ipcMain, app, dialog, screen, Menu, shell, clipboard, BrowserWindow } from 'electron';
 import { execFile } from 'child_process';
 import fs from 'fs';
 
@@ -197,6 +197,51 @@ export function registerIpcHandlers({ store, asanaApi, getMainWindow, getSetting
 
   ipcMain.handle('asana:refresh', async () => {
     await asanaApi.refresh();
+  });
+
+  // ── Inbox ────────────────────────────────────────────────────
+
+  ipcMain.handle('inbox:fetch-notifications', async () => {
+    try {
+      const tasks = store.getCachedTasks();
+      const settings = store.getSettings();
+      const limit = settings.inboxTaskLimit ?? 25;
+      const currentUserId = settings.currentUserId ?? null;
+      const notifications = await asanaApi.fetchInboxNotifications(tasks, currentUserId, limit);
+      return { notifications };
+    } catch (err) {
+      console.error('[ipc] Failed to fetch inbox notifications:', (err as Error).message);
+      return { notifications: [], error: (err as Error).message };
+    }
+  });
+
+  ipcMain.handle('inbox:get-archived-gids', () => {
+    return store.getArchivedInboxGids();
+  });
+
+  ipcMain.handle('inbox:archive', (_, storyGid: string) => {
+    if (!storyGid || typeof storyGid !== 'string') return;
+    store.archiveInboxItem(storyGid);
+  });
+
+  ipcMain.handle('inbox:archive-all', (_, storyGids: string[]) => {
+    if (!Array.isArray(storyGids)) return;
+    store.archiveAllInboxItems(storyGids);
+  });
+
+  ipcMain.handle('window:get-slide-direction', (): 'left' | 'right' => {
+    const mainWin = getMainWindow();
+    if (!mainWin || mainWin.isDestroyed()) return 'right';
+
+    const winBounds = mainWin.getBounds();
+    const display = screen.getDisplayMatching(winBounds);
+    const screenBounds = display.workArea;
+
+    const distToLeft = winBounds.x - screenBounds.x;
+    const distToRight = (screenBounds.x + screenBounds.width) - (winBounds.x + winBounds.width);
+
+    // If window is closer to the right edge, slide from left; otherwise from right
+    return distToRight <= distToLeft ? 'left' : 'right';
   });
 
   // ── App ─────────────────────────────────────────────────────

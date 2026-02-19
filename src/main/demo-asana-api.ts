@@ -6,10 +6,11 @@
 
 import type { Store } from './store';
 import type {
-  AsanaUser, AsanaComment, AsanaSection, AsanaField, AsanaWorkspace, VerifyApiKeyResult,
+  AsanaUser, AsanaComment, AsanaStory, AsanaSection, AsanaField, AsanaWorkspace,
+  AsanaTask, VerifyApiKeyResult, InboxNotification,
   PollCallback, PollStartedCallback, AsanaAPILike
 } from '../shared/types';
-import { DEMO_WORKSPACE, DEMO_CURRENT_USER, getDemoUsers, getDemoProjects, getDemoTasks } from './demo-data';
+import { DEMO_WORKSPACE, DEMO_CURRENT_USER, getDemoUsers, getDemoProjects, getDemoTasks, getDemoInboxNotifications } from './demo-data';
 
 export class DemoAsanaAPI implements AsanaAPILike {
   private _store: Store;
@@ -59,6 +60,35 @@ export class DemoAsanaAPI implements AsanaAPILike {
         type: 'comment',
       },
     ];
+  }
+
+  async getTaskStories(_taskGid: string): Promise<AsanaStory[]> {
+    // Return a few varied demo stories for any task
+    const now = new Date();
+    const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    return [
+      {
+        gid: '9100000000000001',
+        text: 'Jordan Lee assigned this task to Alex Morgan',
+        created_at: dayAgo.toISOString(),
+        created_by: { gid: '2000000000000002', name: 'Jordan Lee' },
+        type: 'system',
+        resource_subtype: 'assigned',
+      },
+      {
+        gid: '9100000000000002',
+        text: 'I pushed an update to the staging branch. Can you take a look?',
+        created_at: hourAgo.toISOString(),
+        created_by: { gid: '2000000000000002', name: 'Jordan Lee' },
+        type: 'comment',
+        resource_subtype: 'comment_added',
+      },
+    ];
+  }
+
+  async fetchInboxNotifications(_tasks: AsanaTask[], _currentUserId: string | null, _limit: number): Promise<InboxNotification[]> {
+    return getDemoInboxNotifications();
   }
 
   async getProjectSections(_projectGid: string): Promise<AsanaSection[]> {

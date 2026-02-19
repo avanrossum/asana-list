@@ -5,8 +5,8 @@
 // ══════════════════════════════════════════════════════════════════════════════
 
 import type {
-  AsanaTask, AsanaProject, AsanaUser, AsanaComment, AsanaSection, AsanaField,
-  AsanaWorkspace, VerifyApiKeyResult,
+  AsanaTask, AsanaProject, AsanaUser, AsanaComment, AsanaStory, AsanaSection, AsanaField,
+  AsanaWorkspace, VerifyApiKeyResult, InboxNotification,
   PollCallback, PollStartedCallback
 } from '../shared/types';
 import type { Store } from './store';
@@ -35,6 +35,7 @@ export class AsanaAPI {
   private _pollTimer: ReturnType<typeof setInterval> | null = null;
   private _onUpdate: PollCallback | null = null;
   private _onPollStarted: PollStartedCallback | null = null;
+  private _usersFetchedThisSession = false;
 
   constructor({ store, getApiKey }: AsanaAPIOptions) {
     this._store = store;
@@ -229,6 +230,93 @@ export class AsanaAPI {
     return stories.filter(s => s.type === 'comment');
   }
 
+  private static readonly _STORY_FIELDS_EXTENDED = 'text,html_text,created_by.name,created_by.gid,created_at,type,resource_subtype,sticker_name,num_likes';
+  private static readonly _STORY_FIELDS_BASE = 'text,html_text,created_by.name,created_by.gid,created_at,type,resource_subtype';
+  private _useExtendedStoryFields = true;
+
+  async getTaskStories(taskGid: string): Promise<AsanaStory[]> {
+    const fields = this._useExtendedStoryFields
+      ? AsanaAPI._STORY_FIELDS_EXTENDED
+      : AsanaAPI._STORY_FIELDS_BASE;
+    try {
+      return await this._fetchAll<AsanaStory>(
+        `/tasks/${taskGid}/stories?opt_fields=${fields}`
+      );
+    } catch (err) {
+      // If the extended fields caused a failure, fall back to base fields for this
+      // and all future requests in this session
+      if (this._useExtendedStoryFields) {
+        console.warn('[asana-api] Extended story fields failed, falling back to base fields');
+        this._useExtendedStoryFields = false;
+        return this._fetchAll<AsanaStory>(
+          `/tasks/${taskGid}/stories?opt_fields=${AsanaAPI._STORY_FIELDS_BASE}`
+        );
+      }
+      throw err;
+    }
+  }
+
+  async fetchInboxNotifications(tasks: AsanaTask[], currentUserId: string | null, limit: number): Promise<InboxNotification[]> {
+    // Filter to tasks assigned to the current user (if known)
+    let candidateTasks = tasks;
+    if (currentUserId) {
+      candidateTasks = tasks.filter(t => t.assignee?.gid === currentUserId);
+    }
+
+    // Sort by modified_at descending, take top N
+    candidateTasks.sort((a, b) => {
+      const aTime = a.modified_at ? new Date(a.modified_at).getTime() : 0;
+      const bTime = b.modified_at ? new Date(b.modified_at).getTime() : 0;
+      return bTime - aTime;
+    });
+    candidateTasks = candidateTasks.slice(0, limit);
+
+    if (candidateTasks.length === 0) return [];
+
+    // Fetch stories with bounded concurrency (5 at a time)
+    const CONCURRENCY = 5;
+    const allNotifications: InboxNotification[] = [];
+
+    for (let i = 0; i < candidateTasks.length; i += CONCURRENCY) {
+      const batch = candidateTasks.slice(i, i + CONCURRENCY);
+      const results = await Promise.all(
+        batch.map(async (task) => {
+          try {
+            const stories = await this.getTaskStories(task.gid);
+            return stories
+              .filter(s => s.resource_subtype !== 'marked_complete')
+              .map(s => ({
+                storyGid: s.gid,
+                taskGid: task.gid,
+                taskName: task.name,
+                text: s.text || '',
+                createdAt: s.created_at,
+                createdBy: s.created_by,
+                resourceSubtype: s.resource_subtype,
+                stickerName: s.sticker_name ?? undefined,
+                numLikes: s.num_likes ?? undefined,
+              }));
+          } catch (err) {
+            console.warn(`[asana-api] Failed to fetch stories for task ${task.gid}:`, (err as Error).message);
+            return [];
+          }
+        })
+      );
+      for (const notifs of results) {
+        allNotifications.push(...notifs);
+      }
+    }
+
+    // Sort all notifications newest-first
+    allNotifications.sort((a, b) => {
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      return bTime - aTime;
+    });
+
+    return allNotifications;
+  }
+
   // ── Polling ─────────────────────────────────────────────────
 
   startPolling(intervalMinutes: number, onUpdate: PollCallback, onPollStarted?: PollStartedCallback): void {
@@ -277,11 +365,12 @@ export class AsanaAPI {
       if (workspaces.length === 0) return;
       const workspaceGid = workspaces[0].gid;
 
-      // Fetch users if not cached
-      const cachedUsers = this._store.getCachedUsers();
-      if (cachedUsers.length === 0) {
+      // Refresh users once per app session (handles stale cache from demo mode,
+      // team membership changes, etc.)
+      if (!this._usersFetchedThisSession) {
         const users = await this.getUsers(workspaceGid);
         this._store.setCachedUsers(users);
+        this._usersFetchedThisSession = true;
       }
 
       // Determine which users to fetch tasks for

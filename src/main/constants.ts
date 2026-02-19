@@ -58,5 +58,6 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'apiKey' | 'apiKeyVerified' | 'win
   openLinksIn: 'default',
   apiKey: null,
   apiKeyVerified: false,
-  windowBounds: null
+  windowBounds: null,
+  inboxTaskLimit: 25
 };

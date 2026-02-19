@@ -1,6 +1,6 @@
 {
   "name": "panoptisana",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "description": "Open-source Asana task and project visibility tool for macOS",
   "main": "dist-main/main/main.js",
   "scripts": {

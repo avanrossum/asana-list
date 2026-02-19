@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import TaskList from './components/TaskList';
 import ProjectList from './components/ProjectList';
+import InboxDrawer from './components/InboxDrawer';
 import Icon from './components/Icon';
 import { ICON_PATHS } from './icons';
 import { applyTheme } from '../shared/applyTheme';
@@ -70,6 +71,8 @@ export default function App() {
   const [myProjectsOnly, setMyProjectsOnly] = useState(false);
   const [selectedProjectGid, setSelectedProjectGid] = useState('');
   const [filterSettings, setFilterSettings] = useState<FilterSettings>(EMPTY_FILTER_SETTINGS);
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [inboxSlideDirection, setInboxSlideDirection] = useState<'left' | 'right'>('right');
   const searchRef = useRef<HTMLInputElement>(null);
 
   // ── Init ────────────────────────────────────────────────────
@@ -164,10 +167,22 @@ export default function App() {
         e.preventDefault();
         searchRef.current?.focus();
       }
+      // Cmd/Ctrl+I to toggle inbox
+      if ((e.metaKey || e.ctrlKey) && e.key === 'i') {
+        e.preventDefault();
+        if (inboxOpen) {
+          setInboxOpen(false);
+        } else {
+          window.electronAPI.getSlideDirection().then(dir => {
+            setInboxSlideDirection(dir);
+            setInboxOpen(true);
+          });
+        }
+      }
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [inboxOpen]);
 
   // ── Derived Data ───────────────────────────────────────────
 
@@ -296,6 +311,16 @@ export default function App() {
     });
   }, []);
 
+  const handleOpenInbox = useCallback(async () => {
+    const dir = await window.electronAPI.getSlideDirection();
+    setInboxSlideDirection(dir);
+    setInboxOpen(true);
+  }, []);
+
+  const handleCloseInbox = useCallback(() => {
+    setInboxOpen(false);
+  }, []);
+
   // ── Render ──────────────────────────────────────────────────
 
   return (
@@ -311,6 +336,9 @@ export default function App() {
             title={isPolling ? 'Refreshing...' : 'Refresh'}
           >
             <Icon path={ICON_PATHS.refresh} size={16} />
+          </button>
+          <button className="icon-btn" onClick={handleOpenInbox} title="Inbox (Cmd+I)">
+            <Icon path={ICON_PATHS.inbox} size={16} />
           </button>
           <button className="icon-btn" onClick={handleOpenSettings} title="Settings">
             <Icon path={ICON_PATHS.settings} size={16} />
@@ -473,6 +501,14 @@ export default function App() {
         </div>
         <span>v{version}</span>
       </div>
+
+      {/* Inbox Drawer */}
+      <InboxDrawer
+        isOpen={inboxOpen}
+        onClose={handleCloseInbox}
+        slideDirection={inboxSlideDirection}
+        currentUserId={currentUserId}
+      />
     </div>
   );
 }

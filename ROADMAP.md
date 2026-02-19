@@ -4,7 +4,7 @@
 
 Open-source Asana task and project visibility tool for macOS. Displays a searchable list of incomplete tasks and active projects with comment tracking and auto-updates.
 
-## Current Version: 0.5.7
+## Current Version: 0.5.8
 
 ### Core Features (v0.1.0)
 - [x] Searchable task list with sorting
@@ -127,6 +127,16 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [x] DRY: Extract `useCopyToClipboard` / `useCopyToClipboardKeyed` hooks — replaces 6 identical copy handlers in `TaskItem.tsx` and 5 in `ProjectList.tsx`
 - [x] DRY: Deduplicate `.project-item-actions` CSS — identical to `.task-item-actions`, consolidated to single class
 
+### v0.5.8 Additions
+- [x] Inbox slide-out drawer — notification panel showing recent stories (comments, assignments, status changes, reactions) from assigned tasks, slides in from window edge with CSS transform
+- [x] Slide direction detection — main process uses `screen.getDisplayMatching()` to determine if window is near left or right screen edge, drawer slides in from the opposite side
+- [x] Inbox archive — single-item and bulk "Archive All" (double-confirm pattern), persisted in `inbox_archived` SQLite table
+- [x] 35+ story subtype labels — human-readable mapping (e.g. `comment_added` → "Comment", `section_changed` → "Moved") with smart fallback for unknown subtypes (snake_case → Title Case)
+- [x] Sticker/reaction display support — emoji mapping for Asana stickers, resilient API field fallback when extended `opt_fields` are rejected
+- [x] Keyboard shortcut: Cmd/Ctrl+I to toggle inbox drawer
+- [x] Demo mode inbox — 8 realistic demo notifications with varied subtypes
+- [x] Fix: Stale demo users in Settings — session-scoped user refresh flag ensures workspace users are fetched once per app launch regardless of cached demo data
+
 ## Up Next
 
 ### Bugs & Fixes
@@ -158,7 +168,7 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [ ] Notification for new comments
 
 ### Interaction & Navigation
-- [ ] Inbox slide-out drawer — Asana inbox notifications panel that slides in from the window edge via CSS `transform: translateX()`. Main process detects window position relative to screen bounds (`screen.getDisplayMatching`) to determine slide direction (left or right edge). Fixed-position overlay, no separate window
+- [x] Inbox slide-out drawer — Asana inbox notifications panel that slides in from the window edge via CSS `transform: translateX()`. Main process detects window position relative to screen bounds (`screen.getDisplayMatching`) to determine slide direction (left or right edge). Fixed-position overlay, no separate window
 - [ ] Keyboard navigation in task list
 - [ ] Task count badges in tray menu
 - [ ] Task grouping (by project, by assignee, by section)

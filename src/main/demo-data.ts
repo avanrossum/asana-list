@@ -4,7 +4,7 @@
 // Activated via PANOPTISANA_DEMO=1 environment variable.
 // ══════════════════════════════════════════════════════════════════════════════
 
-import type { AsanaUser, AsanaProject, AsanaTask, AsanaWorkspace } from '../shared/types';
+import type { AsanaUser, AsanaProject, AsanaTask, AsanaWorkspace, InboxNotification } from '../shared/types';
 
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -395,4 +395,98 @@ const DEMO_TASKS: AsanaTask[] = [
 
 export function getDemoTasks(): AsanaTask[] {
   return DEMO_TASKS;
+}
+
+
+// ── Inbox Notifications ─────────────────────────────────────────────────────
+
+function hoursAgo(hours: number): string {
+  const d = new Date();
+  d.setTime(d.getTime() - hours * 60 * 60 * 1000);
+  return d.toISOString();
+}
+
+function minutesAgo(minutes: number): string {
+  const d = new Date();
+  d.setTime(d.getTime() - minutes * 60 * 1000);
+  return d.toISOString();
+}
+
+const DEMO_INBOX_NOTIFICATIONS: InboxNotification[] = [
+  {
+    storyGid: '9200000000000001',
+    taskGid: '4000000000000004',
+    taskName: 'Fix timezone display in notification emails',
+    text: 'I found the root cause — the offset was being applied twice in the email template renderer.',
+    createdAt: minutesAgo(12),
+    createdBy: { gid: '2000000000000002', name: 'Jordan Lee' },
+    resourceSubtype: 'comment_added',
+  },
+  {
+    storyGid: '9200000000000002',
+    taskGid: '4000000000000006',
+    taskName: 'Review PR #847: Rate limiter middleware',
+    text: 'Jordan Lee assigned this task to you',
+    createdAt: minutesAgo(45),
+    createdBy: { gid: '2000000000000002', name: 'Jordan Lee' },
+    resourceSubtype: 'assigned',
+  },
+  {
+    storyGid: '9200000000000003',
+    taskGid: '4000000000000015',
+    taskName: 'Coordinate product hunt launch sequence',
+    text: 'Quinn Foster added this task to Q1 Marketing Campaign',
+    createdAt: hoursAgo(2),
+    createdBy: { gid: '2000000000000008', name: 'Quinn Foster' },
+    resourceSubtype: 'added_to_project',
+  },
+  {
+    storyGid: '9200000000000004',
+    taskGid: '4000000000000003',
+    taskName: 'Write RFC for notification system redesign',
+    text: 'Changed due date to Feb 20',
+    createdAt: hoursAgo(3),
+    createdBy: { gid: '2000000000000002', name: 'Jordan Lee' },
+    resourceSubtype: 'due_date_changed',
+  },
+  {
+    storyGid: '9200000000000005',
+    taskGid: '4000000000000001',
+    taskName: 'Define Q2 product priorities',
+    text: 'Great progress on the competitive section. One note: let\'s also cover the mid-market segment.',
+    createdAt: hoursAgo(5),
+    createdBy: { gid: '2000000000000006', name: 'Morgan Patel' },
+    resourceSubtype: 'comment_added',
+  },
+  {
+    storyGid: '9200000000000006',
+    taskGid: '4000000000000023',
+    taskName: 'Optimize image loading for slow connections',
+    text: 'Riley Brooks moved this task to Performance',
+    createdAt: hoursAgo(8),
+    createdBy: { gid: '2000000000000007', name: 'Riley Brooks' },
+    resourceSubtype: 'section_changed',
+  },
+  {
+    storyGid: '9200000000000007',
+    taskGid: '4000000000000018',
+    taskName: 'Map current onboarding funnel drop-offs',
+    text: 'Sam Rivera added analytics-export.csv',
+    createdAt: hoursAgo(12),
+    createdBy: { gid: '2000000000000003', name: 'Sam Rivera' },
+    resourceSubtype: 'attachment_added',
+  },
+  {
+    storyGid: '9200000000000008',
+    taskGid: '4000000000000010',
+    taskName: 'Audit button variants for WCAG compliance',
+    text: 'I put together a checklist based on WCAG 2.2 AA. Can you review before I start the audit?',
+    createdAt: hoursAgo(24),
+    createdBy: { gid: '2000000000000007', name: 'Riley Brooks' },
+    resourceSubtype: 'comment_added',
+  },
+];
+
+export function getDemoInboxNotifications(): InboxNotification[] {
+  return DEMO_INBOX_NOTIFICATIONS;
 }

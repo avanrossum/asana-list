@@ -33,6 +33,10 @@ interface MetaRow {
   value: string;
 }
 
+interface ArchivedRow {
+  story_gid: string;
+}
+
 interface PreparedStatements {
   getAllSettings: Database.Statement;
   getSetting: Database.Statement;
@@ -41,6 +45,8 @@ interface PreparedStatements {
   setCache: Database.Statement;
   getAllSeen: Database.Statement;
   setSeen: Database.Statement;
+  getAllArchivedInbox: Database.Statement;
+  archiveInboxItem: Database.Statement;
 }
 
 export class Store {
@@ -49,6 +55,7 @@ export class Store {
   private _db!: Database.Database;
   private _stmts!: PreparedStatements;
   private _setManySettings!: Database.Transaction<(entries: [string, unknown][]) => void>;
+  private _archiveManyInbox!: Database.Transaction<(gids: string[], now: number) => void>;
 
   constructor() {
     const userDataDir = app.getPath('userData');
@@ -139,6 +146,11 @@ export class Store {
         key   TEXT PRIMARY KEY,
         value TEXT
       );
+
+      CREATE TABLE IF NOT EXISTS inbox_archived (
+        story_gid   TEXT PRIMARY KEY,
+        archived_at INTEGER NOT NULL
+      );
     `);
 
     // Set schema version (only on first creation)
@@ -156,13 +168,22 @@ export class Store {
       getCache:       this._db.prepare('SELECT data FROM cache WHERE key = ?'),
       setCache:       this._db.prepare('INSERT OR REPLACE INTO cache (key, data, fetched_at) VALUES (?, ?, ?)'),
       getAllSeen:     this._db.prepare('SELECT task_gid, timestamp FROM seen_timestamps'),
-      setSeen:        this._db.prepare('INSERT OR REPLACE INTO seen_timestamps (task_gid, timestamp) VALUES (?, ?)')
+      setSeen:        this._db.prepare('INSERT OR REPLACE INTO seen_timestamps (task_gid, timestamp) VALUES (?, ?)'),
+      getAllArchivedInbox: this._db.prepare('SELECT story_gid FROM inbox_archived'),
+      archiveInboxItem:   this._db.prepare('INSERT OR REPLACE INTO inbox_archived (story_gid, archived_at) VALUES (?, ?)')
     };
 
     // Transaction for batch settings updates
     this._setManySettings = this._db.transaction((entries: [string, unknown][]) => {
       for (const [key, value] of entries) {
         this._stmts.setSetting.run(key, JSON.stringify(value));
+      }
+    });
+
+    // Transaction for batch inbox archive
+    this._archiveManyInbox = this._db.transaction((gids: string[], now: number) => {
+      for (const gid of gids) {
+        this._stmts.archiveInboxItem.run(gid, now);
       }
     });
   }
@@ -275,6 +296,24 @@ export class Store {
   setSeenTimestamp(taskGid: string, timestamp: string): void {
     if (!taskGid || !timestamp) return;
     this._stmts.setSeen.run(taskGid, timestamp);
+  }
+
+  // ── Inbox Archive ────────────────────────────────────────────
+
+  getArchivedInboxGids(): string[] {
+    const rows = this._stmts.getAllArchivedInbox.all() as ArchivedRow[];
+    return rows.map(r => r.story_gid);
+  }
+
+  archiveInboxItem(storyGid: string): void {
+    if (!storyGid) return;
+    this._stmts.archiveInboxItem.run(storyGid, Date.now());
+  }
+
+  archiveAllInboxItems(storyGids: string[]): void {
+    if (!storyGids || storyGids.length === 0) return;
+    const now = Date.now();
+    this._archiveManyInbox(storyGids, now);
   }
 
   // ── Lifecycle ─────────────────────────────────────────────────

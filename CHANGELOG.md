@@ -5,6 +5,21 @@ All notable changes to Panoptisana will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.8] - 2026-02-19
+
+### Added
+- Inbox slide-out drawer — notification panel showing recent activity (comments, assignments, status changes, reactions) from tasks assigned to you, accessible via the inbox button in the title bar or Cmd/Ctrl+I
+- Drawer slides in from the window edge — main process detects proximity to screen bounds and slides from the opposite side for optimal visibility
+- Per-notification archive with optimistic UI update, plus bulk "Archive All" with double-confirm safety pattern
+- 35+ story subtype labels with human-readable mapping (e.g. "Comment", "Assigned", "Moved", "Due Date Changed") and smart fallback for unknown subtypes
+- Sticker/reaction emoji display support with resilient API field fallback
+- `inbox_archived` SQLite table for persisting archive state across sessions
+- Demo mode: 8 realistic inbox notifications with varied subtypes (comment, assignment, project add, due date change, section move, attachment)
+
+### Fixed
+- Settings window showed demo mode users after switching to live mode — `DemoAsanaAPI` wrote fake users to SQLite cache, and the live API skipped user fetching when cache was non-empty. Now uses a session-scoped flag to refresh users once per app launch regardless of cache state
+- Asana API story fetch could silently fail when requesting extended fields (`sticker_name`, `num_likes`) on certain story types — now falls back to base fields automatically on first failure
+
 ## [0.5.7] - 2026-02-19
 
 ### Added
