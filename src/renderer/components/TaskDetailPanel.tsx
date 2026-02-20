@@ -12,6 +12,8 @@ import type { AsanaUser, AsanaComment, AsanaSubtask, TaskDetail, CompleteTaskRes
 interface TaskDetailPanelProps {
   taskGid: string;
   cachedUsers: AsanaUser[];
+  workspaceGid: string | null;
+  userMembershipMap: Record<string, string>;
   onClose: () => void;
   onNavigateToTask: (taskGid: string) => void;
   onComplete: (taskGid: string) => void;
@@ -22,7 +24,7 @@ type CompleteState = 'idle' | 'confirming' | 'completing';
 // ── Component ───────────────────────────────────────────────────
 
 export default function TaskDetailPanel({
-  taskGid, cachedUsers, onClose, onNavigateToTask, onComplete
+  taskGid, cachedUsers, workspaceGid, userMembershipMap, onClose, onNavigateToTask, onComplete
 }: TaskDetailPanelProps) {
   // Data states
   const [detail, setDetail] = useState<TaskDetail | null>(null);
@@ -344,7 +346,7 @@ export default function TaskDetailPanel({
                         })}
                       </span>
                       <div className="comment-text">
-                        <CommentRenderer text={comment.text} users={cachedUsers} />
+                        <CommentRenderer text={comment.text} htmlText={comment.html_text} users={cachedUsers} />
                       </div>
                     </div>
                   ))}
@@ -357,6 +359,8 @@ export default function TaskDetailPanel({
               <CommentComposer
                 taskGid={taskGid}
                 cachedUsers={cachedUsers}
+                workspaceGid={workspaceGid}
+                userMembershipMap={userMembershipMap}
                 onCommentAdded={handleCommentAdded}
               />
             </div>

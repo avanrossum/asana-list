@@ -178,6 +178,25 @@ export class AsanaAPI {
     return this._fetchAll<AsanaUser>(`/workspaces/${workspaceGid}/users?opt_fields=name,email,photo.image_60x60`);
   }
 
+  /**
+   * Fetch workspace memberships and build a user GID → membership GID map.
+   * Asana profile links use the membership GID (not user GID) in the URL path:
+   * `https://app.asana.com/1/{workspaceGid}/profile/{membershipGid}`
+   */
+  async getUserMembershipMap(workspaceGid: string): Promise<Record<string, string>> {
+    interface WorkspaceMembership { gid: string; user: { gid: string } }
+    const memberships = await this._fetchAll<WorkspaceMembership>(
+      `/workspaces/${workspaceGid}/workspace_memberships?opt_fields=user.gid`
+    );
+    const map: Record<string, string> = {};
+    for (const m of memberships) {
+      if (m.user?.gid) {
+        map[m.user.gid] = m.gid;
+      }
+    }
+    return map;
+  }
+
   async getTasks(workspaceGid: string, assigneeGid: string | null): Promise<AsanaTask[]> {
     const fields = 'name,assignee.name,assignee.gid,completed,due_on,due_at,modified_at,created_at,num_subtasks,parent.name,parent.gid,projects.name,projects.gid,memberships.project.gid,memberships.section.gid,memberships.section.name';
     const assigneeParam = assigneeGid ? `&assignee=${assigneeGid}` : '';
@@ -385,11 +404,15 @@ export class AsanaAPI {
       if (workspaces.length === 0) return;
       const workspaceGid = workspaces[0].gid;
 
-      // Refresh users once per app session (handles stale cache from demo mode,
-      // team membership changes, etc.)
+      // Refresh users + membership map once per app session (handles stale cache
+      // from demo mode, team membership changes, etc.)
       if (!this._usersFetchedThisSession) {
-        const users = await this.getUsers(workspaceGid);
+        const [users, membershipMap] = await Promise.all([
+          this.getUsers(workspaceGid),
+          this.getUserMembershipMap(workspaceGid),
+        ]);
         this._store.setCachedUsers(users);
+        this._store.setUserMembershipMap(membershipMap);
         this._usersFetchedThisSession = true;
       }
 
@@ -446,7 +469,7 @@ export class AsanaAPI {
 
       // Send unfiltered data to renderer (it will apply filters locally for instant feedback)
       if (this._onUpdate) {
-        this._onUpdate({ tasks, projects, unfilteredTaskCount, unfilteredProjectCount, hasNewInboxActivity });
+        this._onUpdate({ tasks, projects, unfilteredTaskCount, unfilteredProjectCount, hasNewInboxActivity, workspaceGid });
       }
     } catch (err) {
       console.error('[asana-api] Poll failed:', (err as Error).message);

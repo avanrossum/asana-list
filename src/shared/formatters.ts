@@ -78,20 +78,53 @@ export function formatRelativeTime(isoTimestamp: string | null | undefined, now:
 }
 
 /**
+ * Extract user GID → display name mappings from Asana `html_text`.
+ * Asana represents @mentions in HTML as `<a data-asana-gid="123">@Name</a>`.
+ * Returns a map of GID → cleaned name (with leading @ stripped).
+ */
+function extractUsersFromHtml(htmlText: string): Record<string, string> {
+  const map: Record<string, string> = {};
+  const tagRegex = /<a[^>]+data-asana-gid="(\d+)"[^>]*>([^<]+)<\/a>/g;
+  let m;
+  while ((m = tagRegex.exec(htmlText)) !== null) {
+    const gid = m[1];
+    const name = m[2].replace(/^@/, '').trim();
+    if (name) {
+      map[gid] = name;
+    }
+  }
+  return map;
+}
+
+/**
  * Parse comment text to identify Asana profile links and general URLs.
  * Returns an array of segments: plain text strings and link descriptors.
+ *
+ * When `htmlText` is provided, user names are extracted from Asana's rich-text
+ * markup as a supplemental lookup — this resolves profile links for users not
+ * present in the workspace user cache (e.g. external collaborators, guests).
  *
  * This is the pure logic layer — the React component wraps these segments
  * in <a> tags and click handlers.
  */
-export function parseCommentSegments(text: string | null | undefined, users: AsanaUser[]): CommentSegment[] | null {
+export function parseCommentSegments(text: string | null | undefined, users: AsanaUser[], htmlText?: string): CommentSegment[] | null {
   if (!text) return null;
 
-  // Build user GID → name lookup
+  // Build user GID → name lookup from cached workspace users
   const userMap: Record<string, string> = {};
   if (users && users.length > 0) {
     for (const u of users) {
       userMap[u.gid] = u.name;
+    }
+  }
+
+  // Supplement with names extracted from html_text (covers users not in workspace cache)
+  if (htmlText) {
+    const htmlUsers = extractUsersFromHtml(htmlText);
+    for (const [gid, name] of Object.entries(htmlUsers)) {
+      if (!userMap[gid]) {
+        userMap[gid] = name;
+      }
     }
   }
 
@@ -141,21 +174,35 @@ export function parseCommentSegments(text: string | null | undefined, users: Asa
 
 /**
  * Replace @mentions in comment text with Asana profile link URLs.
- * Converts "@Display Name" patterns into "https://app.asana.com/0/0/profile/{userGid}".
+ * Uses the `/1/` URL scheme with workspace membership GIDs (not user GIDs)
+ * for correct Asana profile links:
+ *   "https://app.asana.com/1/{workspaceGid}/profile/{membershipGid}"
+ *
+ * When membershipMap is empty or a user has no membership GID, falls back
+ * to user GID. When workspaceGid is missing, falls back to `0`.
  * Unknown @mentions are left as-is.
  */
-export function replaceMentionsWithLinks(text: string, users: AsanaUser[]): string {
+export function replaceMentionsWithLinks(
+  text: string,
+  users: AsanaUser[],
+  workspaceGid?: string,
+  membershipMap?: Record<string, string>,
+): string {
   if (!text || users.length === 0) return text;
 
   // Build name → user map (case-insensitive), sorted by name length descending for greedy matching
   const sortedUsers = [...users].sort((a, b) => b.name.length - a.name.length);
+  const wsGid = workspaceGid || '0';
 
   let result = text;
   for (const user of sortedUsers) {
     // Escape regex special characters in user name
     const escaped = user.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const pattern = new RegExp(`@${escaped}(?![\\w])`, 'gi');
-    result = result.replace(pattern, `https://app.asana.com/0/0/profile/${user.gid}`);
+    // Use workspace membership GID for profile link (Asana's /1/ URL scheme),
+    // falling back to user GID if membership map is unavailable
+    const profileGid = membershipMap?.[user.gid] || user.gid;
+    result = result.replace(pattern, `https://app.asana.com/1/${wsGid}/profile/${profileGid}`);
   }
 
   return result;

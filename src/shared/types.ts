@@ -217,6 +217,7 @@ export interface PollDataPacket {
   unfilteredTaskCount?: number;
   unfilteredProjectCount?: number;
   hasNewInboxActivity?: boolean;
+  workspaceGid?: string;
   error?: string;
 }
 
@@ -267,6 +268,7 @@ export interface IpcInvokeChannelMap {
   'asana:get-tasks':          { args: [];                                    return: AsanaTask[] };
   'asana:get-projects':       { args: [];                                    return: AsanaProject[] };
   'asana:get-users':          { args: [];                                    return: AsanaUser[] };
+  'asana:get-user-membership-map': { args: [];                               return: Record<string, string> };
   'asana:get-task-comments':  { args: [taskGid: string];                     return: AsanaComment[] };
   'asana:get-project-sections': { args: [projectGid: string];               return: AsanaSection[] };
   'asana:get-project-fields': { args: [projectGid: string];                 return: AsanaField[] };
@@ -331,6 +333,7 @@ export interface ElectronAPI {
   getTasks(): Promise<AsanaTask[]>;
   getProjects(): Promise<AsanaProject[]>;
   getUsers(): Promise<AsanaUser[]>;
+  getUserMembershipMap(): Promise<Record<string, string>>;
   getTaskComments(taskGid: string): Promise<AsanaComment[]>;
   getProjectSections(projectGid: string): Promise<AsanaSection[]>;
   getProjectFields(projectGid: string): Promise<AsanaField[]>;

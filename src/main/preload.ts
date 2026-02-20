@@ -11,6 +11,7 @@ const electronAPI: ElectronAPI = {
   getTasks: () => ipcRenderer.invoke('asana:get-tasks'),
   getProjects: () => ipcRenderer.invoke('asana:get-projects'),
   getUsers: () => ipcRenderer.invoke('asana:get-users'),
+  getUserMembershipMap: () => ipcRenderer.invoke('asana:get-user-membership-map'),
   getTaskComments: (taskGid) => ipcRenderer.invoke('asana:get-task-comments', taskGid),
   getProjectSections: (projectGid) => ipcRenderer.invoke('asana:get-project-sections', projectGid),
   getProjectFields: (projectGid) => ipcRenderer.invoke('asana:get-project-fields', projectGid),

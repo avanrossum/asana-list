@@ -9,12 +9,14 @@ import type { AsanaUser, AsanaComment } from '../../shared/types';
 interface CommentComposerProps {
   taskGid: string;
   cachedUsers: AsanaUser[];
+  workspaceGid: string | null;
+  userMembershipMap: Record<string, string>;
   onCommentAdded: (comment: AsanaComment) => void;
 }
 
 // ── Component ───────────────────────────────────────────────────
 
-export default function CommentComposer({ taskGid, cachedUsers, onCommentAdded }: CommentComposerProps) {
+export default function CommentComposer({ taskGid, cachedUsers, workspaceGid, userMembershipMap, onCommentAdded }: CommentComposerProps) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +127,7 @@ export default function CommentComposer({ taskGid, cachedUsers, onCommentAdded }
     setMentionQuery(null);
 
     try {
-      const transformed = replaceMentionsWithLinks(trimmed, cachedUsers);
+      const transformed = replaceMentionsWithLinks(trimmed, cachedUsers, workspaceGid || undefined, userMembershipMap);
       const result = await window.electronAPI.addComment(taskGid, transformed);
 
       if (result.success && result.comment) {
@@ -139,7 +141,7 @@ export default function CommentComposer({ taskGid, cachedUsers, onCommentAdded }
     } finally {
       setSending(false);
     }
-  }, [text, sending, taskGid, cachedUsers, onCommentAdded]);
+  }, [text, sending, taskGid, cachedUsers, workspaceGid, userMembershipMap, onCommentAdded]);
 
   // Close mention dropdown on click outside
   useEffect(() => {

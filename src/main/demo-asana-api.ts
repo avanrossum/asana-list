@@ -22,7 +22,16 @@ export class DemoAsanaAPI implements AsanaAPILike {
     this._store = store;
 
     // Seed cached users so the settings window user list works
-    this._store.setCachedUsers(getDemoUsers());
+    const users = getDemoUsers();
+    this._store.setCachedUsers(users);
+
+    // Seed demo membership map (in real mode, user GID ≠ membership GID;
+    // for demo, use a predictable offset to simulate this)
+    const membershipMap: Record<string, string> = {};
+    for (const u of users) {
+      membershipMap[u.gid] = `9${u.gid.substring(1)}`; // e.g. 2xxx → 9xxx
+    }
+    this._store.setUserMembershipMap(membershipMap);
   }
 
   // ── API Methods (all return fake data) ─────────────────────────
@@ -223,6 +232,7 @@ export class DemoAsanaAPI implements AsanaAPILike {
         unfilteredTaskCount: tasks.length,
         unfilteredProjectCount: projects.length,
         hasNewInboxActivity: true,
+        workspaceGid: DEMO_WORKSPACE.gid,
       });
     }
   }

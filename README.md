@@ -6,16 +6,20 @@ A fast, focused Asana visibility tool for macOS. Lives in your menu bar, shows y
 
 ## Features
 
-- **Task List** - Searchable, sortable list of all incomplete tasks
-- **Project List** - Searchable list of all active projects
-- **Comment Tracking** - Toggle comments on any task; highlights when new comments arrive
-- **Smart Filtering** - Filter by user, exclude or include tasks/projects by name pattern
-- **"Only My Projects" Filter** - Quick checkbox to show only projects you're a member of
-- **Right-Click Context Menu** - Right-click any task or project to exclude it or copy its GID
-- **Dark/Light/System Theme** - 7 accent colors, matches your macOS appearance
-- **Global Hotkey** - Ctrl+Shift+A to toggle visibility (configurable)
-- **Auto-Updates** - Automatic update checks via GitHub releases
-- **Encrypted API Key** - Your Asana API key is stored securely via the OS Keychain
+- **Task & Project Lists** — Searchable, sortable lists of all incomplete tasks and active projects
+- **Task Detail Panel** — Full task details including description, subtasks, project memberships, and due dates
+- **Comments** — Read and post comments with @mention support (autocomplete dropdown, profile link resolution)
+- **Inbox Notifications** — Slide-out drawer showing recent activity on your assigned tasks
+- **Activity Highlighting** — Gold border on tasks with activity since you last viewed them
+- **Smart Filtering** — Filter by user, exclude or include tasks/projects by name pattern, pin items to top
+- **Project Filtering** — Filter tasks by project, toggle "Only My Projects"
+- **CSV Export** — Export filtered task/project lists with configurable fields and sections
+- **Right-Click Context Menu** — Exclude items, pin to top, copy GID/URL
+- **Dark/Light/System Theme** — 7 accent colors, matches your macOS appearance
+- **Global Hotkey** — Ctrl+Shift+A to toggle visibility (configurable)
+- **Configurable Browser** — Open Asana links in Safari, Chrome, Firefox, Arc, Zen, or the Asana desktop app
+- **Auto-Updates** — Automatic update checks via GitHub releases
+- **Encrypted API Key** — Your Asana API key is stored securely via the OS Keychain
 
 ## Getting Started
 
@@ -62,6 +66,7 @@ The token is stored encrypted on your machine and is never sent anywhere except 
 npm run dev          # Dev mode (Vite HMR + Electron)
 npm run build        # Production build
 npm run pack         # Package without signing
+npm run typecheck    # Type-check both main and renderer tsconfigs
 npm run lint         # ESLint
 npm test             # Run tests
 npm run test:watch   # Tests in watch mode
@@ -77,20 +82,24 @@ Panoptisana is built using AI-assisted development with structured engineering p
 
 ## Tech Stack
 
-- **Electron 40** - Desktop framework
-- **React 19** - UI components
-- **Vite 7** - Build tooling
-- **Vitest** - Testing framework
-- **ESLint** - Code quality
-- **GitHub Actions** - CI (lint + test on every push)
-- **electron-updater** - Auto-update support
+- **Electron 40** — Desktop framework
+- **React 19** — UI components
+- **TypeScript** — Strict mode, dual tsconfig (main + renderer)
+- **Vite 7** — Build tooling
+- **SQLite** — Local data persistence via better-sqlite3
+- **Vitest** — Testing framework
+- **ESLint** — Code quality
+- **GitHub Actions** — CI (typecheck + lint + test on every push)
+- **electron-updater** — Auto-update support
 
 ## License
 
-This project is licensed under the **GNU General Public License v3.0** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **GNU General Public License v3.0** — see the [LICENSE](LICENSE) file for details.
+
+**Pre-v1 (current):** All features, including auto-updates and signed DMG releases, are included in the open-source distribution. Everything ships as-is under GPL-3.0.
+
+**v1 and beyond:** If and when Panoptisana reaches v1, distribution may move to a split model — the core application remains open-source under GPL-3.0, while signed binaries, auto-updates, and managed distribution may be offered separately as a one-time purchase. The source code will always be available to build from. This is not a commitment to change the model — just a reservation of the option.
 
 ## Credits
 
 Built by [MipYip](https://github.com/avanrossum).
-
-<!-- Check out [Actions](https://github.com/avanrossum/actions-releases) - a quick action launcher for macOS. -->

@@ -75,6 +75,8 @@ export default function App() {
   const [inboxOpen, setInboxOpen] = useState(false);
   const [inboxSlideDirection, setInboxSlideDirection] = useState<'left' | 'right'>('right');
   const [hasNewInboxActivity, setHasNewInboxActivity] = useState(false);
+  const [workspaceGid, setWorkspaceGid] = useState<string | null>(null);
+  const [userMembershipMap, setUserMembershipMap] = useState<Record<string, string>>({});
   const [taskDetailStack, setTaskDetailStack] = useState<string[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -91,18 +93,20 @@ export default function App() {
         setFilterSettings(extractFilterSettings(settings));
 
         // Load cached data
-        const [cachedTasks, cachedProjects, seen, ver, users] = await Promise.all([
+        const [cachedTasks, cachedProjects, seen, ver, users, membershipMap] = await Promise.all([
           window.electronAPI.getTasks(),
           window.electronAPI.getProjects(),
           window.electronAPI.getSeenTimestamps(),
           window.electronAPI.getVersion(),
-          window.electronAPI.getUsers()
+          window.electronAPI.getUsers(),
+          window.electronAPI.getUserMembershipMap()
         ]);
 
         setTasks(cachedTasks || []);
         setProjects(cachedProjects || []);
         setSeenTimestamps(seen || {});
         setCachedUsers(users || []);
+        setUserMembershipMap(membershipMap || {});
 
         // Set current user ID for comment highlight suppression & project filter
         if (settings.currentUserId) {
@@ -131,6 +135,7 @@ export default function App() {
       if (data.unfilteredTaskCount !== null && data.unfilteredTaskCount !== undefined) setUnfilteredTaskCount(data.unfilteredTaskCount);
       if (data.unfilteredProjectCount !== null && data.unfilteredProjectCount !== undefined) setUnfilteredProjectCount(data.unfilteredProjectCount);
       if (data.hasNewInboxActivity !== undefined) setHasNewInboxActivity(data.hasNewInboxActivity);
+      if (data.workspaceGid) setWorkspaceGid(data.workspaceGid);
       setIsConnected(true);
     });
 
@@ -546,6 +551,8 @@ export default function App() {
         <TaskDetailPanel
           taskGid={taskDetailStack[taskDetailStack.length - 1]}
           cachedUsers={cachedUsers}
+          workspaceGid={workspaceGid}
+          userMembershipMap={userMembershipMap}
           onClose={handleCloseTaskDetail}
           onNavigateToTask={handleNavigateToTask}
           onComplete={handleCompleteTask}

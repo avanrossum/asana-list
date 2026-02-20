@@ -154,6 +154,10 @@ export function registerIpcHandlers({ store, asanaApi, getMainWindow, getSetting
     return store.getCachedUsers();
   });
 
+  ipcMain.handle('asana:get-user-membership-map', () => {
+    return store.getUserMembershipMap();
+  });
+
   ipcMain.handle('asana:get-task-comments', async (_, taskGid: string) => {
     if (!taskGid || typeof taskGid !== 'string') return [];
     try {

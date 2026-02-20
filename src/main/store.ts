@@ -282,6 +282,21 @@ export class Store {
     this._stmts.setCache.run('users', JSON.stringify(users), null);
   }
 
+  /** Map of user GID → workspace membership GID (for Asana profile link URLs). */
+  getUserMembershipMap(): Record<string, string> {
+    const row = this._stmts.getCache.get('userMembershipMap') as CacheRow | undefined;
+    if (!row) return {};
+    try {
+      return JSON.parse(row.data);
+    } catch (_) {
+      return {};
+    }
+  }
+
+  setUserMembershipMap(map: Record<string, string>): void {
+    this._stmts.setCache.run('userMembershipMap', JSON.stringify(map), null);
+  }
+
   // ── Comment Tracking ──────────────────────────────────────────
 
   getSeenTimestamps(): Record<string, string> {

@@ -175,6 +175,46 @@ describe('parseCommentSegments', () => {
     const profileSegment = result!.find(s => s.type === 'profile');
     expect(profileSegment!.value).toBe('Profile');
   });
+
+  it('resolves unknown user from htmlText when not in users array', () => {
+    const text = 'See https://app.asana.com/1/999/profile/55555 comment';
+    const htmlText = '<body><a data-asana-gid="55555" data-asana-type="user">@Lauren Lopez</a> comment</body>';
+    const result = parseCommentSegments(text, users, htmlText);
+
+    const profileSegment = result!.find(s => s.type === 'profile');
+    expect(profileSegment!.value).toBe('Lauren Lopez');
+    expect(profileSegment!.userName).toBe('Lauren Lopez');
+  });
+
+  it('prefers cached user name over htmlText name', () => {
+    const text = 'See https://app.asana.com/0/1/profile/12345 comment';
+    const htmlText = '<body><a data-asana-gid="12345" data-asana-type="user">@Alice Override</a></body>';
+    const result = parseCommentSegments(text, users, htmlText);
+
+    const profileSegment = result!.find(s => s.type === 'profile');
+    // Should use cached name, not HTML name
+    expect(profileSegment!.value).toBe('Alice Smith');
+  });
+
+  it('resolves multiple unknown users from htmlText', () => {
+    const text = 'https://app.asana.com/1/999/profile/55555 and https://app.asana.com/1/999/profile/66666';
+    const htmlText = '<body><a data-asana-gid="55555">@Lauren Lopez</a> and <a data-asana-gid="66666">@Tim Baker</a></body>';
+    const result = parseCommentSegments(text, [], htmlText);
+
+    const profiles = result!.filter(s => s.type === 'profile');
+    expect(profiles).toHaveLength(2);
+    expect(profiles[0].value).toBe('Lauren Lopez');
+    expect(profiles[1].value).toBe('Tim Baker');
+  });
+
+  it('still falls back to "Profile" when not in users or htmlText', () => {
+    const text = 'See https://app.asana.com/0/1/profile/99999 comment';
+    const htmlText = '<body>No mentions here</body>';
+    const result = parseCommentSegments(text, users, htmlText);
+
+    const profileSegment = result!.find(s => s.type === 'profile');
+    expect(profileSegment!.value).toBe('Profile');
+  });
 });
 
 // ── replaceMentionsWithLinks ─────────────────────────────────
@@ -188,12 +228,12 @@ describe('replaceMentionsWithLinks', () => {
 
   it('replaces a single @mention with a profile URL', () => {
     const result = replaceMentionsWithLinks('Thanks @Alice Smith for the help', users);
-    expect(result).toBe('Thanks https://app.asana.com/0/0/profile/12345 for the help');
+    expect(result).toBe('Thanks https://app.asana.com/1/0/profile/12345 for the help');
   });
 
   it('replaces multiple @mentions', () => {
     const result = replaceMentionsWithLinks('@Alice Smith and @Bob Jones', users);
-    expect(result).toBe('https://app.asana.com/0/0/profile/12345 and https://app.asana.com/0/0/profile/67890');
+    expect(result).toBe('https://app.asana.com/1/0/profile/12345 and https://app.asana.com/1/0/profile/67890');
   });
 
   it('leaves unknown @mentions as-is', () => {
@@ -203,7 +243,7 @@ describe('replaceMentionsWithLinks', () => {
 
   it('is case-insensitive', () => {
     const result = replaceMentionsWithLinks('@alice smith', users);
-    expect(result).toBe('https://app.asana.com/0/0/profile/12345');
+    expect(result).toBe('https://app.asana.com/1/0/profile/12345');
   });
 
   it('returns text unchanged when no @mentions', () => {
@@ -218,17 +258,55 @@ describe('replaceMentionsWithLinks', () => {
 
   it('handles @mention at end of string', () => {
     const result = replaceMentionsWithLinks('Thanks @Bob Jones', users);
-    expect(result).toBe('Thanks https://app.asana.com/0/0/profile/67890');
+    expect(result).toBe('Thanks https://app.asana.com/1/0/profile/67890');
   });
 
   it('handles @mention at start of string', () => {
     const result = replaceMentionsWithLinks('@Alice Smith is great', users);
-    expect(result).toBe('https://app.asana.com/0/0/profile/12345 is great');
+    expect(result).toBe('https://app.asana.com/1/0/profile/12345 is great');
   });
 
   it('prefers longer name matches (greedy)', () => {
     // "Alice Smith" should match before "Alice" because it's sorted by length descending
     const result = replaceMentionsWithLinks('@Alice Smith', users);
-    expect(result).toBe('https://app.asana.com/0/0/profile/12345');
+    expect(result).toBe('https://app.asana.com/1/0/profile/12345');
+  });
+
+  it('uses workspace GID in profile URL when provided', () => {
+    const result = replaceMentionsWithLinks('@Alice Smith', users, '1203208944700030');
+    expect(result).toBe('https://app.asana.com/1/1203208944700030/profile/12345');
+  });
+
+  it('uses workspace GID for multiple mentions', () => {
+    const result = replaceMentionsWithLinks('@Alice Smith and @Bob Jones', users, '9999');
+    expect(result).toBe('https://app.asana.com/1/9999/profile/12345 and https://app.asana.com/1/9999/profile/67890');
+  });
+
+  it('falls back to 0 when workspace GID is undefined', () => {
+    const result = replaceMentionsWithLinks('@Alice Smith', users, undefined);
+    expect(result).toBe('https://app.asana.com/1/0/profile/12345');
+  });
+
+  it('uses membership GID when membershipMap is provided', () => {
+    const membershipMap = { '12345': 'M12345', '67890': 'M67890' };
+    const result = replaceMentionsWithLinks('@Alice Smith', users, '9999', membershipMap);
+    expect(result).toBe('https://app.asana.com/1/9999/profile/M12345');
+  });
+
+  it('uses membership GIDs for multiple mentions', () => {
+    const membershipMap = { '12345': 'M12345', '67890': 'M67890' };
+    const result = replaceMentionsWithLinks('@Alice Smith and @Bob Jones', users, '9999', membershipMap);
+    expect(result).toBe('https://app.asana.com/1/9999/profile/M12345 and https://app.asana.com/1/9999/profile/M67890');
+  });
+
+  it('falls back to user GID when user not in membershipMap', () => {
+    const membershipMap = { '67890': 'M67890' }; // Alice not in map
+    const result = replaceMentionsWithLinks('@Alice Smith', users, '9999', membershipMap);
+    expect(result).toBe('https://app.asana.com/1/9999/profile/12345');
+  });
+
+  it('falls back to user GID when membershipMap is empty', () => {
+    const result = replaceMentionsWithLinks('@Alice Smith', users, '9999', {});
+    expect(result).toBe('https://app.asana.com/1/9999/profile/12345');
   });
 });
