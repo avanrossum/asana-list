@@ -4,7 +4,7 @@
 
 Open-source Asana task and project visibility tool for macOS. Displays a searchable list of incomplete tasks and active projects with comment tracking and auto-updates.
 
-## Current Version: 0.6.2
+## Current Version: 0.7.0
 
 ### Core Features (v0.1.0)
 - [x] Searchable task list with sorting
@@ -176,6 +176,15 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [x] Task dependencies — "Blocked by" and "Blocking" sections in task detail meta, clickable to navigate into dependency tasks
 - [x] `AsanaDependency` type, `getTaskDependencies` and `getTaskDependents` API endpoints (on-demand)
 
+### v0.7.0 Additions
+- [x] Project detail panel — full-width overlay showing project description, collaborators, and collapsible sections with lazy-loaded task lists. Tasks are clickable to navigate into the task detail panel
+- [x] Task custom fields — collapsible "Fields" section (starts collapsed) in the task detail panel showing all custom field names and display values
+- [x] `ProjectDetailPanel` component with parallel data fetch, lazy section task loading, and status badge coloring
+- [x] 2 new API endpoints: `getProjectDetail` (project notes, members, status), `getSectionTasks` (incomplete tasks per section)
+- [x] "View" button (eye icon) on project list items opens the project detail panel
+- [x] Escape key priority: task detail > project detail > inbox
+- [x] `ProjectDetail`, `AsanaSectionTask`, `TaskCustomField` types
+
 ## Up Next
 
 ### Bugs & Fixes
@@ -278,7 +287,7 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 
 ### Low Priority
 - [ ] Multiple workspace support
-- [ ] Custom fields display
+- [x] Custom fields display
 - [ ] Export task list
 - [ ] Window position memory per display
 
@@ -293,6 +302,13 @@ Open-source Asana task and project visibility tool for macOS. Displays a searcha
 - [ ] Remove unused Vite alias `@shared-styles` from `vite.config.ts`
 - [ ] Memoize regex construction in `formatters.ts` `parseCommentSegments` — currently rebuilds on every call
 - [ ] Use stable keys in `FilterListEditor.tsx` `.map()` — currently uses array index
+
+### Planned Enhancements
+- [ ] Field hiding — right-click a custom field in the task detail Fields section to hide it permanently (stored in settings). "Show hidden fields" button reveals hidden fields with a right-click option to unhide
+
+### Future Considerations
+- [ ] Asana time tracking — display time tracking data from Asana's built-in time tracking feature in the task detail panel
+- [ ] Everhour integration — second API key for Everhour time tracking data, displayed alongside Asana task data
 
 ## Tech Stack
 

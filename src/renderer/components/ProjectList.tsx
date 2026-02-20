@@ -45,17 +45,19 @@ interface ProjectListProps {
   currentUserId: string | null;
   pinnedGids: string[];
   onTogglePin: (type: 'task' | 'project', gid: string) => void;
+  onOpenDetail: (projectGid: string) => void;
 }
 
 interface ProjectItemProps {
   project: AsanaProject;
   isPinned: boolean;
   onTogglePin: (type: 'task' | 'project', gid: string) => void;
+  onOpenDetail: (projectGid: string) => void;
 }
 
 // ── Component ───────────────────────────────────────────────────
 
-export default function ProjectList({ projects, searchQuery, myProjectsOnly, currentUserId, pinnedGids, onTogglePin }: ProjectListProps) {
+export default function ProjectList({ projects, searchQuery, myProjectsOnly, currentUserId, pinnedGids, onTogglePin, onOpenDetail }: ProjectListProps) {
   const filtered = useMemo(() =>
     filterAndSortProjects(projects, { searchQuery, myProjectsOnly, currentUserId, pinnedGids }),
     [projects, searchQuery, myProjectsOnly, currentUserId, pinnedGids]
@@ -89,13 +91,14 @@ export default function ProjectList({ projects, searchQuery, myProjectsOnly, cur
           project={project}
           isPinned={pinnedSet.has(project.gid)}
           onTogglePin={onTogglePin}
+          onOpenDetail={onOpenDetail}
         />
       ))}
     </>
   );
 }
 
-function ProjectItem({ project, isPinned, onTogglePin }: ProjectItemProps) {
+function ProjectItem({ project, isPinned, onTogglePin, onOpenDetail }: ProjectItemProps) {
   const [copiedGid, copyGid] = useCopyToClipboard();
   const [copiedName, copyName] = useCopyToClipboard();
   const [copiedUrl, copyUrl] = useCopyToClipboard();
@@ -219,6 +222,9 @@ function ProjectItem({ project, isPinned, onTogglePin }: ProjectItemProps) {
             title={isPinned ? 'Unpin' : 'Pin to Top'}
           >
             <Icon path={ICON_PATHS.pin} size={12} />
+          </button>
+          <button className="task-btn secondary" onClick={() => onOpenDetail(project.gid)} title="View project details">
+            <Icon path={ICON_PATHS.eye} size={12} />
           </button>
           <button className="task-btn primary" onClick={handleOpenProject}>
             Open Project

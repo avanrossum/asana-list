@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import TaskList from './components/TaskList';
 import ProjectList from './components/ProjectList';
 import InboxDrawer from './components/InboxDrawer';
+import ProjectDetailPanel from './components/ProjectDetailPanel';
 import TaskDetailPanel from './components/TaskDetailPanel';
 import Icon from './components/Icon';
 import { ICON_PATHS } from './icons';
@@ -78,6 +79,7 @@ export default function App() {
   const [workspaceGid, setWorkspaceGid] = useState<string | null>(null);
   const [userMembershipMap, setUserMembershipMap] = useState<Record<string, string>>({});
   const [taskDetailStack, setTaskDetailStack] = useState<string[]>([]);
+  const [projectDetailStack, setProjectDetailStack] = useState<string[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // ── Init ────────────────────────────────────────────────────
@@ -188,10 +190,12 @@ export default function App() {
           });
         }
       }
-      // Escape: close task detail panel first, then inbox
+      // Escape: close task detail first, then project detail, then inbox
       if (e.key === 'Escape') {
         if (taskDetailStack.length > 0) {
           setTaskDetailStack(prev => prev.length > 1 ? prev.slice(0, -1) : []);
+        } else if (projectDetailStack.length > 0) {
+          setProjectDetailStack(prev => prev.length > 1 ? prev.slice(0, -1) : []);
         } else if (inboxOpen) {
           setInboxOpen(false);
         }
@@ -199,7 +203,7 @@ export default function App() {
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [inboxOpen, taskDetailStack]);
+  }, [inboxOpen, taskDetailStack, projectDetailStack]);
 
   // ── Derived Data ───────────────────────────────────────────
 
@@ -352,6 +356,19 @@ export default function App() {
   }, []);
 
   const handleNavigateToTask = useCallback((taskGid: string) => {
+    setTaskDetailStack(prev => [...prev, taskGid]);
+  }, []);
+
+  const handleOpenProjectDetail = useCallback((projectGid: string) => {
+    setProjectDetailStack([projectGid]);
+  }, []);
+
+  const handleCloseProjectDetail = useCallback(() => {
+    setProjectDetailStack(prev => prev.length > 1 ? prev.slice(0, -1) : []);
+  }, []);
+
+  // When navigating to a task from the project detail panel, open task detail on top
+  const handleProjectNavigateToTask = useCallback((taskGid: string) => {
     setTaskDetailStack(prev => [...prev, taskGid]);
   }, []);
 
@@ -513,6 +530,7 @@ export default function App() {
             currentUserId={currentUserId}
             pinnedGids={filterSettings.pinnedProjectGids}
             onTogglePin={handleTogglePin}
+            onOpenDetail={handleOpenProjectDetail}
           />
         )}
       </div>
@@ -543,6 +561,19 @@ export default function App() {
         currentUserId={currentUserId}
         onOpenTaskDetail={handleOpenTaskDetail}
       />
+
+      {/* Project Detail Panel (rendered before Task Detail so tasks overlay projects) */}
+      {projectDetailStack.length > 0 && (
+        <ProjectDetailPanel
+          projectGid={projectDetailStack[projectDetailStack.length - 1]}
+          onClose={handleCloseProjectDetail}
+          onNavigateToTask={handleProjectNavigateToTask}
+          onTogglePin={handleTogglePin}
+          isPinned={filterSettings.pinnedProjectGids.includes(
+            projectDetailStack[projectDetailStack.length - 1]
+          )}
+        />
+      )}
 
       {/* Task Detail Panel */}
       {taskDetailStack.length > 0 && (

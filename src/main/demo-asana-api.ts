@@ -7,7 +7,7 @@
 import type { Store } from './store';
 import type {
   AsanaUser, AsanaComment, AsanaStory, AsanaSection, AsanaField, AsanaWorkspace, AsanaAttachment, AsanaDependency,
-  AsanaTask, AsanaSubtask, TaskDetail, VerifyApiKeyResult, InboxNotification,
+  AsanaSectionTask, AsanaTask, AsanaSubtask, TaskDetail, ProjectDetail, VerifyApiKeyResult, InboxNotification,
   PollCallback, PollStartedCallback, AsanaAPILike
 } from '../shared/types';
 import { DEMO_WORKSPACE, DEMO_CURRENT_USER, getDemoUsers, getDemoProjects, getDemoTasks, getDemoInboxNotifications } from './demo-data';
@@ -67,6 +67,12 @@ export class DemoAsanaAPI implements AsanaAPILike {
       created_at: task?.created_at || new Date().toISOString(),
       modified_at: task?.modified_at || new Date().toISOString(),
       num_subtasks: task?.num_subtasks,
+      custom_fields: [
+        { gid: '7000000000000010', name: 'Priority', type: 'enum', display_value: 'High' },
+        { gid: '7000000000000011', name: 'Story Points', type: 'number', display_value: '5' },
+        { gid: '7000000000000012', name: 'Sprint', type: 'enum', display_value: 'Sprint 23' },
+        { gid: '7000000000000013', name: 'Target Release', type: 'text', display_value: 'v2.0' },
+      ],
     };
   }
 
@@ -235,6 +241,34 @@ export class DemoAsanaAPI implements AsanaAPILike {
       { gid: '7000000000000002', name: 'Story Points', type: 'number' },
       { gid: '7000000000000003', name: 'Sprint', type: 'enum' },
       { gid: '7000000000000004', name: 'Due Date Override', type: 'date' },
+    ];
+  }
+
+  async getProjectDetail(_projectGid: string): Promise<ProjectDetail> {
+    const projects = getDemoProjects();
+    const project = projects.find(p => p.gid === _projectGid);
+    return {
+      gid: project?.gid || _projectGid,
+      name: project?.name || 'Demo Project',
+      notes: 'This is a demo project description.\n\nThe project detail panel shows the full description, collaborators, and sections with their tasks. You can click on any task to open its detail view.',
+      color: project?.color || 'dark-blue',
+      archived: false,
+      owner: project?.owner || null,
+      members: [
+        { gid: DEMO_CURRENT_USER.gid, name: DEMO_CURRENT_USER.name },
+        { gid: '2000000000000002', name: 'Jordan Lee' },
+        { gid: '2000000000000003', name: 'Sam Rivera' },
+      ],
+      modified_at: project?.modified_at || new Date().toISOString(),
+      current_status: project?.current_status || null,
+    };
+  }
+
+  async getSectionTasks(_sectionGid: string): Promise<AsanaSectionTask[]> {
+    return [
+      { gid: '5000000000000010', name: 'Implement search filters', completed: false, assignee: { gid: DEMO_CURRENT_USER.gid, name: DEMO_CURRENT_USER.name } },
+      { gid: '5000000000000011', name: 'Design settings page', completed: false, assignee: { gid: '2000000000000002', name: 'Jordan Lee' } },
+      { gid: '5000000000000012', name: 'Write API documentation', completed: false, assignee: null },
     ];
   }
 

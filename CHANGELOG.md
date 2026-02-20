@@ -5,6 +5,19 @@ All notable changes to Panoptisana will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-02-20
+
+### Added
+- Project detail panel — full-width overlay accessible via the "View" button (eye icon) on project list items, showing project description, collaborators, and collapsible sections with lazy-loaded incomplete task lists
+- Task custom fields — collapsible "Fields" section in the task detail panel (starts collapsed) showing all custom field names and display values from Asana
+- `ProjectDetailPanel` component with parallel data fetch for project detail and sections, lazy section task loading on first expand, status badge with color variants (green/yellow/red/blue), collaborator pill badges, and color-coded project dot
+- 2 new API endpoints: `getProjectDetail` (project notes, members, owner, status, color) and `getSectionTasks` (incomplete tasks per section with assignee)
+- `ProjectDetail`, `AsanaSectionTask`, `TaskCustomField` types in shared types
+- `custom_fields.name`, `custom_fields.type`, `custom_fields.display_value` added to `getTaskDetail` opt_fields
+- Escape key priority updated: task detail > project detail > inbox
+- `projectDetailStack` navigation state in App.tsx — project detail opens below task detail in z-order so clicking a task from a project section opens the task detail on top
+- Demo mode: 4 custom fields on tasks (Priority, Story Points, Sprint, Target Release), project detail with description and 3 collaborators, 3 demo tasks per section
+
 ## [0.6.2] - 2026-02-20
 
 ### Added

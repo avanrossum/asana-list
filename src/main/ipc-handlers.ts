@@ -189,6 +189,26 @@ export function registerIpcHandlers({ store, asanaApi, getMainWindow, getSetting
     }
   });
 
+  ipcMain.handle('asana:get-project-detail', async (_, projectGid: string) => {
+    if (!projectGid || typeof projectGid !== 'string') throw new Error('Invalid project GID');
+    try {
+      return await asanaApi.getProjectDetail(projectGid);
+    } catch (err) {
+      console.error('[ipc] Failed to fetch project detail:', (err as Error).message);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('asana:get-section-tasks', async (_, sectionGid: string) => {
+    if (!sectionGid || typeof sectionGid !== 'string') return [];
+    try {
+      return await asanaApi.getSectionTasks(sectionGid);
+    } catch (err) {
+      console.error('[ipc] Failed to fetch section tasks:', (err as Error).message);
+      return [];
+    }
+  });
+
   ipcMain.handle('asana:get-task-detail', async (_, taskGid: string) => {
     if (!taskGid || typeof taskGid !== 'string') throw new Error('Invalid task GID');
     try {

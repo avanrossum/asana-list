@@ -6,7 +6,8 @@
 
 import type {
   AsanaTask, AsanaProject, AsanaUser, AsanaComment, AsanaStory, AsanaSection, AsanaField,
-  AsanaWorkspace, AsanaAttachment, AsanaDependency, VerifyApiKeyResult, InboxNotification, TaskDetail, AsanaSubtask,
+  AsanaWorkspace, AsanaAttachment, AsanaDependency, AsanaSectionTask, VerifyApiKeyResult, InboxNotification,
+  TaskDetail, ProjectDetail, AsanaSubtask,
   PollCallback, PollStartedCallback
 } from '../shared/types';
 import type { Store } from './store';
@@ -240,8 +241,22 @@ export class AsanaAPI {
     return task.custom_fields.map(cf => ({ gid: cf.gid, name: cf.name, type: cf.type }));
   }
 
+  async getProjectDetail(projectGid: string): Promise<ProjectDetail> {
+    const fields = 'name,notes,html_notes,color,archived,owner.name,owner.gid,modified_at,members.name,members.gid,current_status.title,current_status.color';
+    const result = await this._fetch<ProjectDetail>(`/projects/${projectGid}?opt_fields=${fields}`);
+    return result.data;
+  }
+
+  async getSectionTasks(sectionGid: string): Promise<AsanaSectionTask[]> {
+    const fields = 'name,completed,assignee.name,assignee.gid';
+    const tasks = await this._fetchAll<AsanaSectionTask>(
+      `/sections/${sectionGid}/tasks?opt_fields=${fields}`
+    );
+    return tasks.filter(t => !t.completed);
+  }
+
   async getTaskDetail(taskGid: string): Promise<TaskDetail> {
-    const fields = 'name,notes,html_notes,completed,assignee.name,assignee.gid,projects.name,projects.gid,memberships.project.gid,memberships.section.gid,memberships.section.name,parent.name,parent.gid,due_on,due_at,created_at,modified_at,num_subtasks';
+    const fields = 'name,notes,html_notes,completed,assignee.name,assignee.gid,projects.name,projects.gid,memberships.project.gid,memberships.section.gid,memberships.section.name,parent.name,parent.gid,due_on,due_at,created_at,modified_at,num_subtasks,custom_fields.name,custom_fields.type,custom_fields.display_value';
     const result = await this._fetch<TaskDetail>(`/tasks/${taskGid}?opt_fields=${fields}`);
     return result.data;
   }

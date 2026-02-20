@@ -50,6 +50,7 @@ export default function TaskDetailPanel({
   // UI states
   const [completeState, setCompleteState] = useState<CompleteState>('idle');
   const [collapsedComments, setCollapsedComments] = useState<Set<string>>(new Set());
+  const [fieldsExpanded, setFieldsExpanded] = useState(false);
   const [copiedGid, copyGid] = useCopyToClipboard();
   const [copiedName, copyName] = useCopyToClipboard();
   const [copiedUrl, copyUrl] = useCopyToClipboard();
@@ -75,6 +76,7 @@ export default function TaskDetailPanel({
     setDependents(null);
     setCompleteState('idle');
     setCollapsedComments(new Set());
+    setFieldsExpanded(false);
 
     // Fetch all in parallel
     window.electronAPI.getTaskDetail(taskGid)
@@ -405,6 +407,36 @@ export default function TaskDetailPanel({
                 <div className="task-detail-empty">No description</div>
               )}
             </div>
+
+            {/* Fields Section (collapsible, starts collapsed) */}
+            {detail.custom_fields && detail.custom_fields.length > 0 && (
+              <div className="task-detail-section">
+                <button
+                  className="task-detail-fields-toggle"
+                  onClick={() => setFieldsExpanded(prev => !prev)}
+                >
+                  <span className={`comment-collapse-btn ${fieldsExpanded ? 'expanded' : ''}`}>
+                    <Icon path={ICON_PATHS.chevronRight} size={14} />
+                  </span>
+                  <span className="task-detail-section-title" style={{ margin: 0, border: 'none', paddingBottom: 0 }}>
+                    Fields
+                    <span className="task-detail-section-count">{detail.custom_fields.length}</span>
+                  </span>
+                </button>
+                {fieldsExpanded && (
+                  <div className="task-detail-fields-list">
+                    {detail.custom_fields.map(field => (
+                      <div key={field.gid} className="task-detail-field-item">
+                        <span className="task-detail-field-name">{field.name}</span>
+                        <span className="task-detail-field-value">
+                          {field.display_value || '\u2014'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Attachments Section */}
             {!loadingAttachments && attachments && attachments.length > 0 && (

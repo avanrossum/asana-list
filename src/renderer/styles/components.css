@@ -1750,3 +1750,225 @@
   color: var(--text-muted);
   padding-bottom: 2px;
 }
+
+
+/* ── Task Custom Fields ─────────────────────────────────────── */
+
+.task-detail-fields-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-primary);
+}
+
+.task-detail-fields-toggle:hover {
+  color: var(--accent);
+}
+
+.task-detail-fields-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 8px;
+}
+
+.task-detail-field-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.task-detail-field-item:last-child {
+  border-bottom: none;
+}
+
+.task-detail-field-name {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.task-detail-field-value {
+  font-size: 12px;
+  color: var(--text-primary);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  max-width: 60%;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   PROJECT DETAIL PANEL
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.project-detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Collaborators ── */
+.project-detail-collaborators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.project-detail-collaborator {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--tag-bg);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* ── Status Badge ── */
+.project-detail-status {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-top: 6px;
+  background: var(--tag-bg);
+  color: var(--text-secondary);
+}
+
+.project-detail-status.green {
+  color: var(--success);
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.project-detail-status.yellow {
+  color: var(--warning);
+  background: rgba(234, 179, 8, 0.12);
+}
+
+.project-detail-status.red {
+  color: var(--error);
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.project-detail-status.blue {
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+/* ── Sections ── */
+.project-detail-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.project-detail-section-group {
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.project-detail-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--bg-secondary);
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.project-detail-section-header:hover {
+  background: var(--bg-hover);
+}
+
+.project-detail-section-tasks {
+  padding: 2px 4px;
+}
+
+.project-section-task-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+
+.project-section-task-item:hover {
+  background: var(--bg-hover);
+}
+
+.project-section-task-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-section-task-name:hover {
+  text-decoration: underline;
+}
+
+.project-section-task-assignee {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.project-section-task-open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity 0.15s, color 0.15s;
+  padding: 2px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.project-section-task-open:hover {
+  opacity: 1;
+  color: var(--accent);
+  background: var(--bg-hover);
+}

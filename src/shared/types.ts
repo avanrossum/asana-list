@@ -73,6 +73,7 @@ export interface TaskDetail {
   created_at: string;
   modified_at: string;
   num_subtasks?: number;
+  custom_fields?: TaskCustomField[];
 }
 
 export interface AsanaSubtask {
@@ -123,6 +124,33 @@ export interface AsanaField {
   gid: string;
   name: string;
   type: string;
+}
+
+export interface ProjectDetail {
+  gid: string;
+  name: string;
+  notes: string;
+  html_notes?: string;
+  color: string;
+  archived: boolean;
+  owner?: { gid?: string; name: string } | null;
+  members?: { gid: string; name: string }[];
+  modified_at: string;
+  current_status?: { title: string; color: string } | null;
+}
+
+export interface AsanaSectionTask {
+  gid: string;
+  name: string;
+  completed: boolean;
+  assignee: { gid: string; name: string } | null;
+}
+
+export interface TaskCustomField {
+  gid: string;
+  name: string;
+  type: string;
+  display_value: string | null;
 }
 
 export interface AsanaWorkspace {
@@ -223,6 +251,8 @@ export interface AsanaAPILike {
   fetchInboxNotifications(tasks: AsanaTask[], currentUserId: string | null, limit: number): Promise<InboxNotification[]>;
   getProjectSections(projectGid: string): Promise<AsanaSection[]>;
   getProjectFields(projectGid: string): Promise<AsanaField[]>;
+  getProjectDetail(projectGid: string): Promise<ProjectDetail>;
+  getSectionTasks(sectionGid: string): Promise<AsanaSectionTask[]>;
   getTaskDetail(taskGid: string): Promise<TaskDetail>;
   getSubtasks(taskGid: string): Promise<AsanaSubtask[]>;
   getTaskAttachments(taskGid: string): Promise<AsanaAttachment[]>;
@@ -300,6 +330,8 @@ export interface IpcInvokeChannelMap {
   'asana:get-task-comments':  { args: [taskGid: string];                     return: AsanaComment[] };
   'asana:get-project-sections': { args: [projectGid: string];               return: AsanaSection[] };
   'asana:get-project-fields': { args: [projectGid: string];                 return: AsanaField[] };
+  'asana:get-project-detail':   { args: [projectGid: string];               return: ProjectDetail };
+  'asana:get-section-tasks':    { args: [sectionGid: string];               return: AsanaSectionTask[] };
   'asana:get-task-detail':    { args: [taskGid: string];                     return: TaskDetail };
   'asana:get-subtasks':       { args: [taskGid: string];                     return: AsanaSubtask[] };
   'asana:get-task-attachments': { args: [taskGid: string];                   return: AsanaAttachment[] };
@@ -370,6 +402,8 @@ export interface ElectronAPI {
   getTaskComments(taskGid: string): Promise<AsanaComment[]>;
   getProjectSections(projectGid: string): Promise<AsanaSection[]>;
   getProjectFields(projectGid: string): Promise<AsanaField[]>;
+  getProjectDetail(projectGid: string): Promise<ProjectDetail>;
+  getSectionTasks(sectionGid: string): Promise<AsanaSectionTask[]>;
   getTaskDetail(taskGid: string): Promise<TaskDetail>;
   getSubtasks(taskGid: string): Promise<AsanaSubtask[]>;
   getTaskAttachments(taskGid: string): Promise<AsanaAttachment[]>;
